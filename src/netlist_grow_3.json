@@ -1,0 +1,32 @@
+{
+    "nodes":  [
+        {
+            "id": 5,
+            "name": "Ceres",
+            "node_num": "105",
+            "kv": "138"
+        },
+        {
+            "id": 4,
+            "name": "Mars",
+            "node_num": "104",
+            "kv": "138"
+        }
+    ],
+    "branches": [
+        {
+            "id": 6,
+            "name": "Ceres - Mars #1",
+            "node1_id": 4,
+            "node2_id": 5,
+            "ckt": "1"
+        },
+        {
+            "id": 7,
+            "name": "Ceres - Mars #2",
+            "node1_id": 4,
+            "node2_id": 5,
+            "ckt": "2"
+        }
+    ]
+}

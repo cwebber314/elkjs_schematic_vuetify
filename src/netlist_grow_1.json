@@ -1,0 +1,25 @@
+{
+    "nodes":  [
+        {
+            "id": 1,
+            "name": "Sol",
+            "node_num": "101",
+            "kv": "138"
+        },
+        {
+            "id": 4,
+            "name": "Mars",
+            "node_num": "104",
+            "kv": "138"
+        }
+    ],
+    "branches": [
+        {
+            "id": 5,
+            "name": "Sol - Mars #1",
+            "node1_id": 1,
+            "node2_id": 4,
+            "ckt": "1"
+        }
+    ]
+}

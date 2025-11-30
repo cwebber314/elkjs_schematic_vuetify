@@ -1,0 +1,32 @@
+{
+    "nodes":  [
+        {
+            "id": 2,
+            "name": "Luna",
+            "node_num": "102",
+            "kv": "138"
+        },
+        {
+            "id": 4,
+            "name": "Mars",
+            "node_num": "104",
+            "kv": "138"
+        }
+    ],
+    "branches": [
+        {
+            "id": 8,
+            "name": "Luna - Mars #1",
+            "node1_id": 2,
+            "node2_id": 4,
+            "ckt": "1"
+        },
+        {
+            "id": 9,
+            "name": "Luna - Mars #2",
+            "node1_id": 2,
+            "node2_id": 4,
+            "ckt": "2"
+        }
+    ]
+}

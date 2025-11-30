@@ -1,0 +1,99 @@
+{
+    "nodes": [
+        {
+            "id": 1,
+            "name": "Sol",
+            "node_num": "101",
+            "kv": "138"
+        },
+        {
+            "id": 2,
+            "name": "Luna",
+            "node_num": "102",
+            "kv": "138"
+        },
+        {
+            "id": 3,
+            "name": "Earth",
+            "node_num": "103",
+            "kv": "138"
+        },
+        {
+            "id": 4,
+            "name": "Mars",
+            "node_num": "104",
+            "kv": "138"
+        },
+        {
+            "id": 5,
+            "name": "Ceres",
+            "node_num": "105",
+            "kv": "138"
+        }
+    ],
+    "branches": [
+        {
+            "id": 1,
+            "name": "Sol - Luna #1",
+            "node1_id": 1,
+            "node2_id": 2,
+            "ckt": "1"
+        },
+        {
+            "id": 2,
+            "name": "Sol - Luna #2",
+            "node1_id": 1,
+            "node2_id": 2,
+            "ckt": "2"
+        },
+        {
+            "id": 3,
+            "name": "Sol - Earth #1",
+            "node1_id": 1,
+            "node2_id": 3,
+            "ckt": "1"
+        },
+        {
+            "id": 4,
+            "name": "Luna - Earth #1",
+            "node1_id": 2,
+            "node2_id": 3,
+            "ckt": "1"
+        },
+        {
+            "id": 5,
+            "name": "Sol - Mars #1",
+            "node1_id": 1,
+            "node2_id": 4,
+            "ckt": "1"
+        },
+        {
+            "id": 6,
+            "name": "Ceres - Mars #1",
+            "node1_id": 4,
+            "node2_id": 5,
+            "ckt": "1"
+        },
+        {
+            "id": 7,
+            "name": "Ceres - Mars #2",
+            "node1_id": 4,
+            "node2_id": 5,
+            "ckt": "2"
+        },
+        {
+            "id": 8,
+            "name": "Luna - Mars #1",
+            "node1_id": 2,
+            "node2_id": 4,
+            "ckt": "1"
+        },
+        {
+            "id": 9,
+            "name": "Luna - Mars #2",
+            "node1_id": 2,
+            "node2_id": 4,
+            "ckt": "2"
+        }
+    ]
+}
