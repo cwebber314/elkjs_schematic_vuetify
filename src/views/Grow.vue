@@ -3,6 +3,7 @@
     <v-row>
       <v-col>
         <h1 class="text-h4 text-primary mb-4">Grow Example</h1>
+        <p>Incrementally grow the network. Typically you would chose to grow a bus and everything connected to it.</p>
       </v-col>
     </v-row>
 

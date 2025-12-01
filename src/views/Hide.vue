@@ -2,7 +2,8 @@
   <v-container fluid class="page-container">
     <v-row>
       <v-col>
-        <h1 class="text-h4 text-primary mb-4">Modify Example</h1>
+        <h1 class="text-h4 text-primary mb-4">Hide Example</h1>
+        <p>Hide/Remove a branch or node</p>
       </v-col>
     </v-row>
 
@@ -83,7 +84,7 @@ import ELK from 'elkjs/lib/elk.bundled.js'
 import netlistData from '../netlist_all.json'
 
 export default {
-  name: 'App',
+  name: 'Hide',
   data() {
     return {
       loading: true,

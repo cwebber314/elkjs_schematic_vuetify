@@ -2,7 +2,8 @@
   <v-container fluid class="page-container">
     <v-row>
       <v-col>
-        <h1 class="text-h4 text-primary mb-4">Simple Example</h1>
+        <h1 class="text-h4 text-primary mb-4">Add Object</h1>
+        <p>Add a node or edge to the diagram</p>
       </v-col>
     </v-row>
 
@@ -17,7 +18,37 @@
       Error: {{ error }}
     </v-alert>
 
-    <v-stage v-else
+    <!-- Toolbar with Add Node and Add Branch buttons -->
+    <v-toolbar v-if="!loading && !error" density="compact" color="surface">
+      <v-btn
+        icon="mdi-vector-point-plus"
+        @click="handleAddNode"
+        :disabled="!isAddNodeEnabled"
+        title="Add Node">
+      </v-btn>
+      <v-btn
+        icon="mdi-vector-polyline-plus"
+        @click="handleAddBranch"
+        :disabled="!isAddBranchEnabled"
+        title="Add Branch">
+      </v-btn>
+    </v-toolbar>
+
+    <!-- Edit Node Dialog -->
+    <EditNode
+      v-model="showNodeDialog"
+      :node="editingNode"
+      @save="handleNodeSave"
+    />
+
+    <!-- Edit Edge Dialog -->
+    <EditEdge
+      v-model="showEdgeDialog"
+      :edge="editingEdge"
+      @save="handleEdgeSave"
+    />
+
+    <v-stage v-if="!loading && !error"
       :config="stageConfig"
       @wheel="handleWheel"
       @mousedown="handleMouseDown"
@@ -74,15 +105,22 @@
 <script>
 import ELK from 'elkjs/lib/elk.bundled.js'
 import netlistData from '../netlist.json'
+import EditNode from '../components/EditNode.vue'
+import EditEdge from '../components/EditEdge.vue'
 
 export default {
-  name: 'Simple',
+  name: 'AddObject',
+  components: {
+    EditNode,
+    EditEdge
+  },
   data() {
     return {
       loading: true,
       error: null,
       layoutNodes: [],
       layoutEdges: [],
+      networkData: { ...netlistData },
       stageConfig: {
         width: window.innerWidth,
         height: window.innerHeight - 60,
@@ -103,7 +141,22 @@ export default {
       edgeStyle: {
         stroke: '#2196F3',
         strokeWidth: 2
-      }
+      },
+      showNodeDialog: false,
+      showEdgeDialog: false,
+      editingNode: null,
+      editingEdge: null
+    }
+  },
+  computed: {
+    selectedNodes() {
+      return this.layoutNodes.filter(node => node.selected)
+    },
+    isAddNodeEnabled() {
+      return this.selectedNodes.length === 0
+    },
+    isAddBranchEnabled() {
+      return this.selectedNodes.length === 2
     }
   },
   async mounted() {
@@ -140,7 +193,7 @@ export default {
           // 'elk.layered.nodePlacement.strategy': 'SIMPLE',
           // 'elk.nodeLabels.placement': 'OUTSIDE, H_LEFT, V_BOTTOM', // I can't get this to work in global
         },
-        children: netlistData.nodes.map(node => ({
+        children: this.networkData.nodes.map(node => ({
           id: String(node.id),
           width: 5,
           height: 100,
@@ -149,7 +202,7 @@ export default {
           },
           labels: [{ text: node.name, width:50, height:10 }]
         })),
-        edges: netlistData.branches.map(branch => ({
+        edges: this.networkData.branches.map(branch => ({
           id: String(branch.id),
           layoutOptions: {
             'elk.edgeLabels.placement': 'TAIL',
@@ -165,7 +218,7 @@ export default {
 
       // Process nodes - manual label positioning
       this.layoutNodes = layout.children.map(node => {
-        const originalNode = netlistData.nodes.find(n => n.id === parseInt(node.id))
+        const originalNode = this.networkData.nodes.find(n => n.id === parseInt(node.id))
 
         // Position label to the right and below the node
         // console.log('Node label:', node.labels[0].text, 'at', node.labels[0].x, node.labels[0].x)
@@ -188,7 +241,7 @@ export default {
 
       // Process edges - use ELK's routing and label positions
       this.layoutEdges = layout.edges.map(edge => {
-        const originalBranch = netlistData.branches.find(b => b.id === parseInt(edge.id))
+        const originalBranch = this.networkData.branches.find(b => b.id === parseInt(edge.id))
         const sections = edge.sections || []
         const points = []
 
@@ -349,6 +402,88 @@ export default {
     handleMouseUp() {
       this.isDragging = false
       this.lastMousePos = null
+    },
+    handleAddNode() {
+      console.log('Add Node button clicked')
+
+      // Create a new node with default values
+      const newNodeId = Math.max(...this.networkData.nodes.map(n => n.id), 0) + 1
+      this.editingNode = {
+        id: newNodeId,
+        name: `Node ${newNodeId}`,
+        node_num: String(100 + newNodeId),
+        kv: '138',
+        x: 0,
+        y: 0,
+        width: 5,
+        height: 100
+      }
+
+      this.showNodeDialog = true
+    },
+    handleAddBranch() {
+      console.log('Add Branch button clicked')
+
+      // Get the two selected nodes
+      const selectedNodes = this.selectedNodes
+      if (selectedNodes.length !== 2) {
+        console.error('Must have exactly 2 nodes selected')
+        return
+      }
+
+      // Create a new branch with the selected nodes
+      const newBranchId = Math.max(...this.networkData.branches.map(b => b.id), 0) + 1
+      const node1 = this.networkData.nodes.find(n => n.id === parseInt(selectedNodes[0].id))
+      const node2 = this.networkData.nodes.find(n => n.id === parseInt(selectedNodes[1].id))
+
+      this.editingEdge = {
+        id: newBranchId,
+        name: `${node1.name} - ${node2.name}`,
+        node1_id: node1.id,
+        node2_id: node2.id,
+        ckt: '1',
+        labelX: 0,
+        labelY: 0,
+        points: []
+      }
+
+      this.showEdgeDialog = true
+    },
+    async handleNodeSave(nodeData) {
+      console.log('Saving node:', nodeData)
+
+      // Add the new node to the network data
+      this.networkData.nodes.push({
+        id: nodeData.id,
+        name: nodeData.name,
+        node_num: nodeData.node_num,
+        kv: nodeData.kv
+      })
+
+      // Redraw the network
+      await this.computeLayout()
+
+      console.log('Node added successfully')
+    },
+    async handleEdgeSave(edgeData) {
+      console.log('Saving edge:', edgeData)
+
+      // Add the new branch to the network data
+      this.networkData.branches.push({
+        id: edgeData.id,
+        name: edgeData.name,
+        node1_id: edgeData.node1_id,
+        node2_id: edgeData.node2_id,
+        ckt: edgeData.ckt
+      })
+
+      // Deselect all nodes
+      this.layoutNodes.forEach(node => node.selected = false)
+
+      // Redraw the network
+      await this.computeLayout()
+
+      console.log('Branch added successfully')
     }
   }
 }

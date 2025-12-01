@@ -1,0 +1,58 @@
+{
+    "nodes":  [
+        {
+            "id": 1,
+            "name": "Sol",
+            "node_num": "101",
+            "kv": "138"
+        },
+        {
+            "id": 2,
+            "name": "Luna",
+            "node_num": "102",
+            "kv": "138"
+        },
+        {
+            "id": 3,
+            "name": "Earth",
+            "node_num": "103",
+            "kv": "138"
+        }
+    ],
+    "branches": [
+        {
+            "id": 1,
+            "name": "Sol - Luna #1",
+            "node1_id": 1,
+            "node2_id": 2,
+            "ckt": "1"
+        },
+        {
+            "id": 2,
+            "name": "Sol - Luna #2",
+            "node1_id": 1,
+            "node2_id": 2,
+            "ckt": "2"
+        },
+        {
+            "id": 3,
+            "name": "Sol - Earth #1",
+            "node1_id": 1,
+            "node2_id": 3,
+            "ckt": "1"
+        },
+        {
+            "id": 4,
+            "name": "Luna - Earth #1",
+            "node1_id": 2,
+            "node2_id": 3,
+            "ckt": "1"
+        }
+    ],
+    "related_branches": [
+        {
+            "branch1_id": 1,
+            "branch2_id": 2
+        }
+    ]
+}

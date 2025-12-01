@@ -1,8 +1,11 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import Simple from '../views/Simple.vue'
 import Grow from '../views/Grow.vue'
-import Modify from '../views/Modify.vue'
+import Hide from '../views/Hide.vue'
+import AddObject from '../views/AddObject.vue'
 import UpdateProperties from '../views/UpdateProperties.vue'
+import Related from '../views/Related.vue'
+import RightClick from '../views/RightClick.vue'
 
 const routes = [
   {
@@ -20,15 +23,30 @@ const routes = [
     component: Grow
   },
   {
-    path: '/modify',
-    name: 'Modify',
-    component: Modify
+    path: '/hide',
+    name: 'Hide',
+    component: Hide
   },
   {
     path: '/update-properties',
     name: 'UpdateProperties',
     component: UpdateProperties
-  }
+  },
+  {
+    path: '/related',
+    name: 'Related',
+    component: Related
+  },
+  {
+    path: '/right-click',
+    name: 'RightClick',
+    component: RightClick
+  },
+  {
+    path: '/add-object',
+    name: 'AddObject',
+    component: AddObject
+  },
 ]
 
 const router = createRouter({

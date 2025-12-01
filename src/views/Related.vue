@@ -2,7 +2,8 @@
   <v-container fluid class="page-container">
     <v-row>
       <v-col>
-        <h1 class="text-h4 text-primary mb-4">Simple Example</h1>
+        <h1 class="text-h4 text-primary mb-4">Related Edges Example</h1>
+        <p>This example demos a way to show that two branches are related to each other.</p>
       </v-col>
     </v-row>
 
@@ -46,6 +47,46 @@
           }"
         />
 
+        <!-- Draw dashed red lines between related branches -->
+        <v-line
+          v-for="(relation, index) in relatedBranchConnections"
+          :key="'relation-' + index"
+          :config="{
+            points: relation.points,
+            stroke: '#FF0000',
+            strokeWidth: 2,
+            dash: [2, 4],
+            lineJoin: 'round',
+            lineCap: 'round'
+          }"
+        />
+
+        <!-- Draw connection dots at the endpoints of related branch lines -->
+        <v-circle
+          v-for="(relation, index) in relatedBranchConnections"
+          :key="'relation-dot1-' + index"
+          :config="{
+            x: relation.points[0],
+            y: relation.points[1],
+            radius: 4,
+            fill: '#FF0000',
+            stroke: '#FFFFFF',
+            strokeWidth: 1
+          }"
+        />
+        <v-circle
+          v-for="(relation, index) in relatedBranchConnections"
+          :key="'relation-dot2-' + index"
+          :config="{
+            x: relation.points[2],
+            y: relation.points[3],
+            radius: 4,
+            fill: '#FF0000',
+            stroke: '#FFFFFF',
+            strokeWidth: 1
+          }"
+        />
+
         <!-- Draw nodes as rectangles -->
         <v-group
           v-for="node in layoutNodes"
@@ -73,10 +114,10 @@
 
 <script>
 import ELK from 'elkjs/lib/elk.bundled.js'
-import netlistData from '../netlist.json'
+import netlistData from '../netlist_related.json'
 
 export default {
-  name: 'Simple',
+  name: 'App',
   data() {
     return {
       loading: true,
@@ -106,6 +147,32 @@ export default {
       }
     }
   },
+  computed: {
+    relatedBranchConnections() {
+      const connections = []
+
+      // Process each related branch pair
+      netlistData.related_branches.forEach(relation => {
+        const branch1 = this.layoutEdges.find(e => e.id === String(relation.branch1_id))
+        const branch2 = this.layoutEdges.find(e => e.id === String(relation.branch2_id))
+
+        if (branch1 && branch2 && branch1.points.length >= 2 && branch2.points.length >= 2) {
+          // Calculate midpoint of branch1
+          const mid1 = this.calculateMidpoint(branch1.points)
+
+          // Calculate midpoint of branch2
+          const mid2 = this.calculateMidpoint(branch2.points)
+
+          // Create a line connecting the two midpoints
+          connections.push({
+            points: [mid1.x, mid1.y, mid2.x, mid2.y]
+          })
+        }
+      })
+
+      return connections
+    }
+  },
   async mounted() {
     try {
       await this.computeLayout()
@@ -120,6 +187,50 @@ export default {
     window.removeEventListener('resize', this.handleResize)
   },
   methods: {
+    calculateMidpoint(points) {
+      // Points array is [x1, y1, x2, y2, x3, y3, ...]
+      // Calculate the total length of the path
+      let totalLength = 0
+      const segments = []
+
+      for (let i = 0; i < points.length - 2; i += 2) {
+        const x1 = points[i]
+        const y1 = points[i + 1]
+        const x2 = points[i + 2]
+        const y2 = points[i + 3]
+
+        const segmentLength = Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
+        segments.push({
+          x1, y1, x2, y2,
+          length: segmentLength
+        })
+        totalLength += segmentLength
+      }
+
+      // Find the segment that contains the midpoint
+      const halfLength = totalLength / 2
+      let accumulatedLength = 0
+
+      for (const segment of segments) {
+        if (accumulatedLength + segment.length >= halfLength) {
+          // The midpoint is in this segment
+          const remainingLength = halfLength - accumulatedLength
+          const ratio = remainingLength / segment.length
+
+          return {
+            x: segment.x1 + (segment.x2 - segment.x1) * ratio,
+            y: segment.y1 + (segment.y2 - segment.y1) * ratio
+          }
+        }
+        accumulatedLength += segment.length
+      }
+
+      // Fallback to the last point if something goes wrong
+      return {
+        x: points[points.length - 2],
+        y: points[points.length - 1]
+      }
+    },
     async computeLayout() {
       const elk = new ELK()
 

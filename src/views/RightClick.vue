@@ -2,7 +2,8 @@
   <v-container fluid class="page-container">
     <v-row>
       <v-col>
-        <h1 class="text-h4 text-primary mb-4">Simple Example</h1>
+        <h1 class="text-h4 text-primary mb-4">Right-Click</h1>
+        <p>Add a right click menu to parts in the canvas</p>
       </v-col>
     </v-row>
 
@@ -22,19 +23,22 @@
       @wheel="handleWheel"
       @mousedown="handleMouseDown"
       @mousemove="handleMouseMove"
-      @mouseup="handleMouseUp">
+      @mouseup="handleMouseUp"
+      @click="handleStageClick"
+      @contextmenu="handleStageRightClick">
       <v-layer>
         <!-- Draw edges (branches) with 90-degree routing -->
         <v-line
-          v-for="edge in layoutEdges"
+          v-for="edge in visibleEdges"
           :key="'edge-' + edge.id"
           :config="getEdgeConfig(edge)"
           @click="handleEdgeClick(edge)"
+          @contextmenu="handleEdgeRightClick(edge, $event)"
         />
 
         <!-- Draw edge labels -->
         <v-text
-          v-for="edge in layoutEdges"
+          v-for="edge in visibleEdges"
           :key="'edge-label-' + edge.id"
           :config="{
             x: edge.labelX,
@@ -48,11 +52,12 @@
 
         <!-- Draw nodes as rectangles -->
         <v-group
-          v-for="node in layoutNodes"
+          v-for="node in visibleNodes"
           :key="'node-' + node.id">
           <v-rect
             :config="getNodeConfig(node)"
             @click="handleNodeClick(node)"
+            @contextmenu="handleNodeRightClick(node, $event)"
           />
           <v-text
             :config="{
@@ -67,6 +72,29 @@
         </v-group>
       </v-layer>
     </v-stage>
+
+    <!-- Context Menu -->
+    <div
+      v-if="contextMenu.show"
+      :style="{
+        position: 'fixed',
+        left: contextMenu.x + 'px',
+        top: contextMenu.y + 'px',
+        zIndex: 9999
+      }"
+      @contextmenu.prevent>
+      <v-card>
+        <v-list dense>
+          <v-list-subheader>{{ contextMenu.objectType }}</v-list-subheader>
+          <v-list-item @click="handleProperties">
+            <v-list-item-title>Properties</v-list-item-title>
+          </v-list-item>
+          <v-list-item @click="handleHide">
+            <v-list-item-title>Hide</v-list-item-title>
+          </v-list-item>
+        </v-list>
+      </v-card>
+    </div>
   </v-container>
 </template>
 
@@ -76,7 +104,7 @@ import ELK from 'elkjs/lib/elk.bundled.js'
 import netlistData from '../netlist.json'
 
 export default {
-  name: 'Simple',
+  name: 'RightClick',
   data() {
     return {
       loading: true,
@@ -103,7 +131,22 @@ export default {
       edgeStyle: {
         stroke: '#2196F3',
         strokeWidth: 2
+      },
+      contextMenu: {
+        show: false,
+        x: 0,
+        y: 0,
+        objectType: '',
+        targetObject: null
       }
+    }
+  },
+  computed: {
+    visibleNodes() {
+      return this.layoutNodes.filter(node => !node.hidden)
+    },
+    visibleEdges() {
+      return this.layoutEdges.filter(edge => !edge.hidden)
     }
   },
   async mounted() {
@@ -111,6 +154,7 @@ export default {
       await this.computeLayout()
       this.loading = false
       window.addEventListener('resize', this.handleResize)
+      window.addEventListener('click', this.handleClickOutside)
     } catch (err) {
       this.error = err.message
       this.loading = false
@@ -118,6 +162,7 @@ export default {
   },
   beforeUnmount() {
     window.removeEventListener('resize', this.handleResize)
+    window.removeEventListener('click', this.handleClickOutside)
   },
   methods: {
     async computeLayout() {
@@ -182,7 +227,8 @@ export default {
           height: node.height,
           labelX,
           labelY,
-          selected: false
+          selected: false,
+          hidden: false
         }
       })
 
@@ -224,7 +270,8 @@ export default {
           points,
           labelX,
           labelY,
-          selected: false
+          selected: false,
+          hidden: false
         }
       })
     },
@@ -349,6 +396,96 @@ export default {
     handleMouseUp() {
       this.isDragging = false
       this.lastMousePos = null
+    },
+    handleStageClick(e) {
+      // Check if the click was on the stage/layer (background) and not on a shape
+      const clickedOnEmpty = e.target === e.target.getStage() || e.target.getType() === 'Layer'
+
+      if (clickedOnEmpty) {
+        // Deselect all objects
+        this.layoutNodes.forEach(node => node.selected = false)
+        this.layoutEdges.forEach(edge => edge.selected = false)
+        console.log('Canvas background clicked - deselecting all')
+      }
+    },
+    handleStageRightClick(e) {
+      // Prevent default browser context menu on canvas
+      e.evt.preventDefault()
+      console.log('Right-click on canvas background - default menu prevented')
+    },
+    handleNodeRightClick(node, e) {
+      // Prevent default context menu
+      e.evt.preventDefault()
+
+      // Deselect all objects
+      this.layoutNodes.forEach(n => n.selected = false)
+      this.layoutEdges.forEach(edge => edge.selected = false)
+
+      // Select the right-clicked node
+      node.selected = true
+
+      // Set context menu properties
+      this.contextMenu.show = false // Hide first to reset position
+      this.contextMenu.x = e.evt.clientX
+      this.contextMenu.y = e.evt.clientY
+      this.contextMenu.objectType = 'Node'
+      this.contextMenu.targetObject = node
+
+      // Show menu on next tick
+      this.$nextTick(() => {
+        this.contextMenu.show = true
+      })
+
+      console.log('Node right-clicked:', node.name, 'at', e.evt.clientX, e.evt.clientY)
+    },
+    handleEdgeRightClick(edge, e) {
+      // Prevent default context menu
+      e.evt.preventDefault()
+
+      // Deselect all objects
+      this.layoutNodes.forEach(n => n.selected = false)
+      this.layoutEdges.forEach(e => e.selected = false)
+
+      // Select the right-clicked edge
+      edge.selected = true
+
+      // Set context menu properties
+      this.contextMenu.show = false // Hide first to reset position
+      this.contextMenu.x = e.evt.clientX
+      this.contextMenu.y = e.evt.clientY
+      this.contextMenu.objectType = 'Branch'
+      this.contextMenu.targetObject = edge
+
+      // Show menu on next tick
+      this.$nextTick(() => {
+        this.contextMenu.show = true
+      })
+
+      console.log('Edge right-clicked:', edge.name, 'at', e.evt.clientX, e.evt.clientY)
+    },
+    handleClickOutside() {
+      // Close context menu when clicking anywhere
+      this.contextMenu.show = false
+    },
+    handleProperties() {
+      console.log('Properties clicked for:', this.contextMenu.objectType, this.contextMenu.targetObject)
+      // TODO: Implement properties dialog
+      this.contextMenu.show = false
+    },
+    handleHide() {
+      const target = this.contextMenu.targetObject
+
+      if (this.contextMenu.objectType === 'Node') {
+        // Hide node by setting a hidden flag
+        target.hidden = true
+        console.log('Hiding node:', target.name)
+      } else if (this.contextMenu.objectType === 'Branch') {
+        // Hide edge by setting a hidden flag
+        target.hidden = true
+        console.log('Hiding branch:', target.name)
+      }
+
+      this.contextMenu.show = false
     }
   }
 }

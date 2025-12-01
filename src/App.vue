@@ -8,8 +8,11 @@
       <v-tabs>
         <v-tab to="/simple">Simple</v-tab>
         <v-tab to="/grow">Grow</v-tab>
-        <v-tab to="/modify">Modify</v-tab>
+        <v-tab to="/hide">Hide</v-tab>
         <v-tab to="/update-properties">Properties</v-tab>
+        <v-tab to="/related">Related</v-tab>
+        <v-tab to="/right-click">Right Click</v-tab>
+        <v-tab to="/add-object">Add</v-tab>
       </v-tabs>
     </v-app-bar>
 
