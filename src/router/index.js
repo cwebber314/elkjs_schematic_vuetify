@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHistory, createWebHashHistory  } from 'vue-router'
 import Simple from '../views/Simple.vue'
 import Grow from '../views/Grow.vue'
 import Hide from '../views/Hide.vue'
@@ -50,7 +50,8 @@ const routes = [
 ]
 
 const router = createRouter({
-  history: createWebHistory(),
+  // history: createWebHistory(),
+  history: createWebHashHistory (),
   routes
 })
 
