@@ -50,11 +50,12 @@ const routes = [
 ]
 
 const router = createRouter({
-  history: createWebHistory(),
+  // history: createWebHistory(),
   // The hash router might play better with static sites, but you can also 
   // just fix it on the hosting platform by redirecting everything it can't find to index.html
+  // The hash router is generally useful when there's no server - which makes sense for our static site deploy
   // example: https://localhost/#/simple
-  // history: createWebHashHistory(),
+  history: createWebHashHistory(),
   routes
 })
 
