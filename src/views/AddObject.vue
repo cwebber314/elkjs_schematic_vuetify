@@ -53,14 +53,15 @@
       @wheel="handleWheel"
       @mousedown="handleMouseDown"
       @mousemove="handleMouseMove"
-      @mouseup="handleMouseUp">
+      @mouseup="handleMouseUp"
+      @click="handleStageClick">
       <v-layer>
         <!-- Draw edges (branches) with 90-degree routing -->
         <v-line
           v-for="edge in layoutEdges"
           :key="'edge-' + edge.id"
           :config="getEdgeConfig(edge)"
-          @click="handleEdgeClick(edge)"
+          @click="handleEdgeClick(edge, $event)"
         />
 
         <!-- Draw edge labels -->
@@ -83,7 +84,7 @@
           :key="'node-' + node.id">
           <v-rect
             :config="getNodeConfig(node)"
-            @click="handleNodeClick(node)"
+            @click="handleNodeClick(node, $event)"
           />
           <v-text
             :config="{
@@ -313,14 +314,23 @@ export default {
       }
       return { ...baseConfig, ...this.edgeStyle }
     },
-    handleNodeClick(node) {
-      // Toggle selection
-      node.selected = !node.selected
+    handleNodeClick(node, e) {
+      // Check if shift key is pressed
+      const shiftPressed = e && e.evt && e.evt.shiftKey
 
-      // Deselect all edges when selecting a node
-      if (node.selected) {
+      if (!shiftPressed) {
+        // Deselect all other nodes and all edges
+        this.layoutNodes.forEach(n => {
+          if (n !== node) n.selected = false
+        })
+        this.layoutEdges.forEach(edge => edge.selected = false)
+      } else {
+        // Deselect all edges when selecting nodes (even with shift)
         this.layoutEdges.forEach(edge => edge.selected = false)
       }
+
+      // Toggle selection of clicked node
+      node.selected = !node.selected
 
       console.log('Node clicked:', node)
       console.log('Node attributes:', {
@@ -335,14 +345,23 @@ export default {
         selected: node.selected
       })
     },
-    handleEdgeClick(edge) {
-      // Toggle selection
-      edge.selected = !edge.selected
+    handleEdgeClick(edge, e) {
+      // Check if shift key is pressed
+      const shiftPressed = e && e.evt && e.evt.shiftKey
 
-      // Deselect all nodes when selecting an edge
-      if (edge.selected) {
+      if (!shiftPressed) {
+        // Deselect all other edges and all nodes
+        this.layoutEdges.forEach(e => {
+          if (e !== edge) e.selected = false
+        })
+        this.layoutNodes.forEach(node => node.selected = false)
+      } else {
+        // Deselect all nodes when selecting edges (even with shift)
         this.layoutNodes.forEach(node => node.selected = false)
       }
+
+      // Toggle selection of clicked edge
+      edge.selected = !edge.selected
 
       console.log('Edge clicked:', edge)
       console.log('Edge attributes:', {
@@ -353,6 +372,17 @@ export default {
         labelY: edge.labelY,
         selected: edge.selected
       })
+    },
+    handleStageClick(e) {
+      // Check if the click was on the stage/layer (background) and not on a shape
+      const clickedOnEmpty = e.target === e.target.getStage() || e.target.getType() === 'Layer'
+
+      if (clickedOnEmpty) {
+        // Deselect all objects
+        this.layoutNodes.forEach(node => node.selected = false)
+        this.layoutEdges.forEach(edge => edge.selected = false)
+        console.log('Canvas background clicked - deselecting all')
+      }
     },
     handleWheel(e) {
       e.evt.preventDefault()
