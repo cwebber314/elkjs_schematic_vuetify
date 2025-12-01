@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory, createWebHashHistory  } from 'vue-router'
+import { createRouter, createWebHistory, createWebHashHistory } from 'vue-router'
 import Simple from '../views/Simple.vue'
 import Grow from '../views/Grow.vue'
 import Hide from '../views/Hide.vue'
@@ -50,8 +50,11 @@ const routes = [
 ]
 
 const router = createRouter({
-  // history: createWebHistory(),
-  history: createWebHashHistory (),
+  history: createWebHistory(),
+  // The hash router might play better with static sites, but you can also 
+  // just fix it on the hosting platform by redirecting everything it can't find to index.html
+  // example: https://localhost/#/simple
+  // history: createWebHashHistory(),
   routes
 })
 
