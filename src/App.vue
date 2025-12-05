@@ -97,6 +97,13 @@
           to="/terminal-crud-component"
         ></v-list-item>
 
+        <v-list-item
+          prepend-icon="mdi-link-variant"
+          title="Mutual Details"
+          value="mutual-details"
+          to="/mutual-details"
+        ></v-list-item>
+
       </v-list>
     </v-navigation-drawer>
 

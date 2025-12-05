@@ -10,6 +10,7 @@ import Terminal from '../views/Terminal.vue'
 import SimpleComponent from '../views/SimpleComponent.vue'
 import TerminalCRUD from '../views/TerminalCRUD.vue'
 import TerminalCRUDComponent from '../views/TerminalCRUDComponent.vue'
+import MutualDetails from '../views/MutualDetails.vue'
 
 const routes = [
   {
@@ -70,7 +71,12 @@ const routes = [
     path: '/terminal-crud-component',
     name: 'TerminalCRUDComponent',
     component: TerminalCRUDComponent
-  },    
+  },
+  {
+    path: '/mutual-details',
+    name: 'MutualDetails',
+    component: MutualDetails
+  }
 ]
 
 const router = createRouter({
