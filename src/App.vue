@@ -13,6 +13,7 @@
         <v-tab to="/related">Related</v-tab>
         <v-tab to="/right-click">Right Click</v-tab>
         <v-tab to="/add-object">Add</v-tab>
+        <v-tab to="/terminal">Terminal</v-tab>
       </v-tabs>
     </v-app-bar>
 

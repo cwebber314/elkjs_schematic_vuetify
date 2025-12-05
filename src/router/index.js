@@ -6,6 +6,7 @@ import AddObject from '../views/AddObject.vue'
 import UpdateProperties from '../views/UpdateProperties.vue'
 import Related from '../views/Related.vue'
 import RightClick from '../views/RightClick.vue'
+import Terminal from '../views/Terminal.vue'
 
 const routes = [
   {
@@ -46,6 +47,11 @@ const routes = [
     path: '/add-object',
     name: 'AddObject',
     component: AddObject
+  },
+  {
+    path: '/terminal',
+    name: 'Terminal',
+    component: Terminal
   },
 ]
 
