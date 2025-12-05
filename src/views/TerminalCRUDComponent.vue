@@ -226,6 +226,26 @@
       v-model="showSectionDialog"
       :section="currentSection"
     />
+
+    <!-- Delete Confirmation Dialog -->
+    <v-dialog v-model="showDeleteDialog" max-width="500px">
+      <v-card>
+        <v-card-title class="text-h5">Confirm Deletion</v-card-title>
+        <v-card-text>
+          <div v-if="itemToDelete">
+            Are you sure you want to delete equipment <strong>{{ itemToDelete.equip_name }}</strong> (ID: {{ itemToDelete.equip_id }})?
+          </div>
+          <div class="text-caption text-grey mt-2">
+            This action cannot be undone.
+          </div>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn color="grey" variant="text" @click="cancelDelete">Cancel</v-btn>
+          <v-btn color="red" variant="text" @click="confirmDelete" :loading="isDeleting">Delete</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-container>
 </template>
 
@@ -252,6 +272,7 @@ export default {
   data() {
     return {
       netlistData,
+      terminalEquipmentData: [...terminalEquipmentData],
       loading: false,
       error: null,
       selectedNodes: [],
@@ -266,10 +287,13 @@ export default {
       showBusDialog: false,
       showEquipmentDialog: false,
       showSectionDialog: false,
+      showDeleteDialog: false,
       currentBranch: null,
       currentBus: null,
       currentEquipment: null,
       currentSection: null,
+      itemToDelete: null,
+      isDeleting: false,
       branchHeaders: [
         { title: 'Actions', key: 'actions', sortable: false, width: '80px' },
         { title: 'ID', key: 'id', sortable: true },
@@ -410,7 +434,7 @@ export default {
           const branchId = branchData.id
 
           // Find all equipment for this branch and node
-          const terminalEquip = terminalEquipmentData.filter(
+          const terminalEquip = this.terminalEquipmentData.filter(
             eq => eq.branch_id === branchId && eq.node_id === nodeId
           )
           equipment.push(...terminalEquip)
@@ -422,7 +446,7 @@ export default {
           const branchId = branchData.id
 
           // Find all equipment for this branch and node
-          const terminalEquip = terminalEquipmentData.filter(
+          const terminalEquip = this.terminalEquipmentData.filter(
             eq => eq.branch_id === branchId && eq.node_id === nodeId
           )
           equipment.push(...terminalEquip)
@@ -528,7 +552,55 @@ export default {
     },
     deleteEquipment(item) {
       console.log('Delete equipment:', item)
-      // TODO: Implement delete confirmation and logic
+      this.itemToDelete = item
+      this.showDeleteDialog = true
+    },
+    cancelDelete() {
+      this.showDeleteDialog = false
+      this.itemToDelete = null
+    },
+    async confirmDelete() {
+      if (!this.itemToDelete) return
+
+      this.isDeleting = true
+
+      try {
+        // Mock API DELETE call
+        const equipmentId = this.itemToDelete.equip_id
+        console.log(`Calling DELETE /api/terminal-equipment/${equipmentId}`)
+
+        // Simulate API call with 500ms delay
+        await new Promise(resolve => setTimeout(resolve, 500))
+
+        // Mock successful response
+        const mockResponse = {
+          success: true,
+          message: `Equipment ${equipmentId} deleted successfully`
+        }
+
+        console.log('DELETE response:', mockResponse)
+
+        if (mockResponse.success) {
+          // Remove item from the local array
+          const index = this.terminalEquipmentData.findIndex(
+            eq => eq.equip_id === this.itemToDelete.equip_id
+          )
+
+          if (index !== -1) {
+            this.terminalEquipmentData.splice(index, 1)
+            console.log(`Removed equipment ${equipmentId} from local data`)
+          }
+
+          // Close dialog and reset
+          this.showDeleteDialog = false
+          this.itemToDelete = null
+        }
+      } catch (error) {
+        console.error('Error deleting equipment:', error)
+        // In a real app, you might show an error notification here
+      } finally {
+        this.isDeleting = false
+      }
     },
     viewSection(item) {
       console.log('View section:', item)
