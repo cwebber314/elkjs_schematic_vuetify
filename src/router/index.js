@@ -7,7 +7,9 @@ import UpdateProperties from '../views/UpdateProperties.vue'
 import Related from '../views/Related.vue'
 import RightClick from '../views/RightClick.vue'
 import Terminal from '../views/Terminal.vue'
+import SimpleComponent from '../views/SimpleComponent.vue'
 import TerminalCRUD from '../views/TerminalCRUD.vue'
+import TerminalCRUDComponent from '../views/TerminalCRUDComponent.vue'
 
 const routes = [
   {
@@ -18,6 +20,11 @@ const routes = [
     path: '/simple',
     name: 'Simple',
     component: Simple
+  },
+  {
+    path: '/simple-component',
+    name: 'SimpleComponent',
+    component: SimpleComponent
   },
   {
     path: '/grow',
@@ -58,7 +65,12 @@ const routes = [
     path: '/terminal-crud',
     name: 'TerminalCRUD',
     component: TerminalCRUD
-  },  
+  },
+  {
+    path: '/terminal-crud-component',
+    name: 'TerminalCRUDComponent',
+    component: TerminalCRUDComponent
+  },    
 ]
 
 const router = createRouter({

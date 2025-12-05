@@ -331,7 +331,7 @@ import ViewEquipment from '../components/ViewEquipment.vue'
 import ViewSection from '../components/ViewSection.vue'
 
 export default {
-  name: 'TerminalCRUD',
+  name: 'Component',
   components: {
     EditEdge,
     EditNode,
