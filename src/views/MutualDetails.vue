@@ -6,8 +6,8 @@
         <v-card>
           <v-card-title class="bg-primary">
             <span class="text-h6">Mutual Coupling Editor</span>
-            <v-chip v-if="selectedSegments.length > 0" color="success" class="ml-4">
-              Selected: {{ selectedSegments.join(', ') }}
+            <v-chip v-if="selectedSections.length > 0" color="success" class="ml-4">
+              Selected: {{ selectedSections.join(', ') }}
             </v-chip>
           </v-card-title>
 
@@ -16,7 +16,7 @@
             <v-toolbar flat density="compact" class="mb-4">
               <v-btn
                 color="primary"
-                :disabled="selectedSegments.length !== 2"
+                :disabled="selectedSections.length !== 2"
                 @click="createMutual"
                 prepend-icon="mdi-link"
                 variant="elevated">
@@ -25,7 +25,7 @@
 
               <v-btn
                 color="error"
-                :disabled="selectedSegments.length !== 2 || !hasExistingMutual"
+                :disabled="selectedSections.length !== 2 || !hasExistingMutual"
                 @click="removeMutual"
                 prepend-icon="mdi-link-off"
                 variant="elevated"
@@ -37,21 +37,21 @@
 
               <v-btn
                 color="success"
-                :disabled="selectedSegments.length !== 1"
-                @click="addSegment"
+                :disabled="selectedSections.length !== 1"
+                @click="addSection"
                 prepend-icon="mdi-plus"
                 variant="elevated">
-                Add Segment
+                Add Section
               </v-btn>
 
               <v-btn
                 color="warning"
-                :disabled="selectedSegments.length !== 1 || !canRemoveSegment"
-                @click="removeSegment"
+                :disabled="selectedSections.length !== 1 || !canRemoveSection"
+                @click="removeSection"
                 prepend-icon="mdi-delete"
                 variant="elevated"
                 class="ml-2">
-                Remove Segment
+                Remove Section
               </v-btn>
 
               <v-spacer></v-spacer>
@@ -84,7 +84,7 @@
       <v-col>
         <v-card>
           <v-tabs v-model="activeTab" bg-color="primary">
-            <v-tab value="lines">Lines & Segments</v-tab>
+            <v-tab value="lines">Lines & Sections</v-tab>
             <v-tab value="mutuals">Mutual Links</v-tab>
           </v-tabs>
 
@@ -97,13 +97,13 @@
                     <v-expansion-panel-title>
                       <v-icon start>mdi-power-plug</v-icon>
                       <strong>{{ line.name }}</strong>
-                      <v-chip size="small" class="ml-2">{{ line.segments.length }} segments</v-chip>
+                      <v-chip size="small" class="ml-2">{{ line.sections.length }} sections</v-chip>
                     </v-expansion-panel-title>
                     <v-expansion-panel-text>
                       <v-table density="compact">
                         <thead>
                           <tr>
-                            <th>Segment ID</th>
+                            <th>Section ID</th>
                             <th>Name</th>
                             <th>Conductor</th>
                             <th>Length</th>
@@ -111,13 +111,13 @@
                           </tr>
                         </thead>
                         <tbody>
-                          <tr v-for="segment in line.segments" :key="segment.id"
-                              :class="{ 'bg-blue-lighten-5': selectedSegments.includes(segment.id) }">
-                            <td>{{ segment.id }}</td>
-                            <td>{{ segment.name }}</td>
-                            <td>{{ segment.conductor || 'N/A' }}</td>
-                            <td>{{ segment.length }}</td>
-                            <td>{{ segment.ordinal }}</td>
+                          <tr v-for="section in line.sections" :key="section.id"
+                              :class="{ 'bg-blue-lighten-5': selectedSections.includes(section.id) }">
+                            <td>{{ section.id }}</td>
+                            <td>{{ section.name }}</td>
+                            <td>{{ section.conductor || 'N/A' }}</td>
+                            <td>{{ section.length }}</td>
+                            <td>{{ section.ordinal }}</td>
                           </tr>
                         </tbody>
                       </v-table>
@@ -141,7 +141,7 @@
                   </template>
                   <template v-slot:no-data>
                     <v-alert type="info" class="ma-2">
-                      No mutual links defined. Select two segments and click "Create Mutual" to add one.
+                      No mutual links defined. Select two sections and click "Create Mutual" to add one.
                     </v-alert>
                   </template>
                 </v-data-table>
@@ -169,11 +169,11 @@ export default {
       lines: [
         {
           name: 'Line A',
-          segments: [
+          sections: [
             {
-              id: 'seg-a1',
+              id: 'sec-a1',
               conductor: 'Copper',
-              name: 'Segment A1',
+              name: 'Section A1',
               length: 150,
               ordinal: 0
             }
@@ -181,18 +181,18 @@ export default {
         },
         {
           name: 'Line B',
-          segments: [
+          sections: [
             {
-              id: 'seg-b1',
+              id: 'sec-b1',
               conductor: 'Aluminum',
-              name: 'Segment B1',
+              name: 'Section B1',
               length: 100,
               ordinal: 0
             },
             {
-              id: 'seg-b2',
+              id: 'sec-b2',
               conductor: 'Aluminum',
-              name: 'Segment B2',
+              name: 'Section B2',
               length: 150,
               ordinal: 1
             }
@@ -200,43 +200,43 @@ export default {
         },
         {
           name: 'Line C',
-          segments: [
+          sections: [
             {
-              id: 'seg-c1',
+              id: 'sec-c1',
               conductor: 'ACSR Drake',
-              name: 'Segment C1',
+              name: 'Section C1',
               length: 100,
               ordinal: 0
             },
             {
-              id: 'seg-c2',
+              id: 'sec-c2',
               conductor: 'ACSR Drake',
-              name: 'Segment C2',
+              name: 'Section C2',
               length: 75,
               ordinal: 1
             },
             {
-              id: 'seg-c3',
+              id: 'sec-c3',
               conductor: 'ACSR Drake',
-              name: 'Segment C3',
+              name: 'Section C3',
               length: 50,
               ordinal: 2
             }
           ]
         }
       ],
-      selectedSegments: [],
+      selectedSections: [],
       mutualLinks: [
         {
-          segment1: 'seg-a1',
-          segment2: 'seg-b2'
+          section1: 'sec-a1',
+          section2: 'sec-b2'
         },
         {
-          segment1: 'seg-b1',
-          segment2: 'seg-c1'
+          section1: 'sec-b1',
+          section2: 'sec-c1'
         }
       ],
-      segmentMap: {},
+      sectionMap: {},
       mutualLinesLayer: null,
       stage: null,
       scaleBy: 1.1,
@@ -244,8 +244,8 @@ export default {
       activeTab: 'lines',
       expandedLines: [0, 1, 2],
       mutualHeaders: [
-        { title: 'Segment 1', key: 'segment1', sortable: true },
-        { title: 'Segment 2', key: 'segment2', sortable: true }
+        { title: 'Section 1', key: 'section1', sortable: true },
+        { title: 'Section 2', key: 'section2', sortable: true }
       ],
       showSnackbar: false,
       snackbarMessage: '',
@@ -254,24 +254,24 @@ export default {
   },
   computed: {
     hasExistingMutual() {
-      if (this.selectedSegments.length !== 2) return false
-      const [seg1, seg2] = this.selectedSegments.sort()
+      if (this.selectedSections.length !== 2) return false
+      const [sec1, sec2] = this.selectedSections.sort()
       return this.mutualLinks.some(link => {
-        const [linkSeg1, linkSeg2] = [link.segment1, link.segment2].sort()
-        return linkSeg1 === seg1 && linkSeg2 === seg2
+        const [linkSeg1, linkSeg2] = [link.section1, link.section2].sort()
+        return linkSeg1 === sec1 && linkSeg2 === sec2
       })
     },
-    canRemoveSegment() {
-      if (this.selectedSegments.length !== 1) return false
+    canRemoveSection() {
+      if (this.selectedSections.length !== 1) return false
 
-      const selectedSegmentId = this.selectedSegments[0]
+      const selectedSectionId = this.selectedSections[0]
 
-      // Find the line that contains this segment
+      // Find the line that contains this section
       for (let line of this.lines) {
-        const index = line.segments.findIndex(seg => seg.id === selectedSegmentId)
+        const index = line.sections.findIndex(sec => sec.id === selectedSectionId)
         if (index !== -1) {
-          // Can only remove if the line has more than 1 segment
-          return line.segments.length > 1
+          // Can only remove if the line has more than 1 section
+          return line.sections.length > 1
         }
       }
 
@@ -279,7 +279,7 @@ export default {
     }
   },
   mounted() {
-    this.calculateSegmentPositions()
+    this.calculateSectionPositions()
     this.initKonva()
     this.drawMutualLinks()
 
@@ -300,43 +300,43 @@ export default {
       this.showSnackbar = true
     },
     createMutual() {
-      if (this.selectedSegments.length !== 2) {
-        this.showNotification('Please select exactly 2 segments', 'error')
+      if (this.selectedSections.length !== 2) {
+        this.showNotification('Please select exactly 2 sections', 'error')
         return
       }
 
-      const [seg1, seg2] = this.selectedSegments
+      const [sec1, sec2] = this.selectedSections
 
       // Check if link already exists
       const exists = this.mutualLinks.some(link =>
-        (link.segment1 === seg1 && link.segment2 === seg2) ||
-        (link.segment1 === seg2 && link.segment2 === seg1)
+        (link.section1 === sec1 && link.section2 === sec2) ||
+        (link.section1 === sec2 && link.section2 === sec1)
       )
 
       if (exists) {
-        this.showNotification('Mutual link already exists between these segments', 'warning')
+        this.showNotification('Mutual link already exists between these sections', 'warning')
         return
       }
 
-      this.mutualLinks.push({ segment1: seg1, segment2: seg2 })
+      this.mutualLinks.push({ section1: sec1, section2: sec2 })
       this.reinitKonva()
       this.showNotification('Mutual link created successfully')
     },
     removeMutual() {
-      if (this.selectedSegments.length !== 2) {
-        this.showNotification('Please select exactly 2 segments', 'error')
+      if (this.selectedSections.length !== 2) {
+        this.showNotification('Please select exactly 2 sections', 'error')
         return
       }
 
-      const [seg1, seg2] = this.selectedSegments
+      const [sec1, sec2] = this.selectedSections
 
       const index = this.mutualLinks.findIndex(link =>
-        (link.segment1 === seg1 && link.segment2 === seg2) ||
-        (link.segment1 === seg2 && link.segment2 === seg1)
+        (link.section1 === sec1 && link.section2 === sec2) ||
+        (link.section1 === sec2 && link.section2 === sec1)
       )
 
       if (index === -1) {
-        this.showNotification('No mutual link exists between these segments', 'warning')
+        this.showNotification('No mutual link exists between these sections', 'warning')
         return
       }
 
@@ -344,141 +344,141 @@ export default {
       this.reinitKonva()
       this.showNotification('Mutual link removed successfully')
     },
-    addSegment() {
-      if (this.selectedSegments.length !== 1) {
-        this.showNotification('Please select exactly 1 segment', 'error')
+    addSection() {
+      if (this.selectedSections.length !== 1) {
+        this.showNotification('Please select exactly 1 section', 'error')
         return
       }
 
-      const selectedSegmentId = this.selectedSegments[0]
+      const selectedSectionId = this.selectedSections[0]
 
-      // Find the line that contains this segment
+      // Find the line that contains this section
       let targetLine = null
-      let segmentIndex = -1
+      let sectionIndex = -1
 
       for (let line of this.lines) {
-        const index = line.segments.findIndex(seg => seg.id === selectedSegmentId)
+        const index = line.sections.findIndex(sec => sec.id === selectedSectionId)
         if (index !== -1) {
           targetLine = line
-          segmentIndex = index
+          sectionIndex = index
           break
         }
       }
 
       if (!targetLine) {
-        this.showNotification('Could not find the selected segment', 'error')
+        this.showNotification('Could not find the selected section', 'error')
         return
       }
 
-      const selectedSegment = targetLine.segments[segmentIndex]
+      const selectedSection = targetLine.sections[sectionIndex]
 
-      // Generate a new unique ID for the segment
+      // Generate a new unique ID for the section
       const timestamp = Date.now()
-      const newSegmentId = `seg-${targetLine.name.toLowerCase().replace(/\s+/g, '-')}-${timestamp}`
+      const newSectionId = `sec-${targetLine.name.toLowerCase().replace(/\s+/g, '-')}-${timestamp}`
 
-      // Create new segment
-      const newSegment = {
-        id: newSegmentId,
-        name: `Segment ${targetLine.name} ${targetLine.segments.length + 1}`,
-        conductor: selectedSegment.conductor,
+      // Create new section
+      const newSection = {
+        id: newSectionId,
+        name: `Section ${targetLine.name} ${targetLine.sections.length + 1}`,
+        conductor: selectedSection.conductor,
         length: 50,
-        ordinal: selectedSegment.ordinal + 1
+        ordinal: selectedSection.ordinal + 1
       }
 
-      // Insert the new segment after the selected one
-      targetLine.segments.splice(segmentIndex + 1, 0, newSegment)
+      // Insert the new section after the selected one
+      targetLine.sections.splice(sectionIndex + 1, 0, newSection)
 
-      // Update ordinal numbers for all subsequent segments
-      for (let i = segmentIndex + 2; i < targetLine.segments.length; i++) {
-        targetLine.segments[i].ordinal = i
+      // Update ordinal numbers for all subsequent sections
+      for (let i = sectionIndex + 2; i < targetLine.sections.length; i++) {
+        targetLine.sections[i].ordinal = i
       }
 
       // Clear selection and re-render
-      this.selectedSegments = []
+      this.selectedSections = []
       this.reinitKonva()
-      this.showNotification('Segment added successfully')
+      this.showNotification('Section added successfully')
     },
-    removeSegment() {
-      if (this.selectedSegments.length !== 1) {
-        this.showNotification('Please select exactly 1 segment', 'error')
+    removeSection() {
+      if (this.selectedSections.length !== 1) {
+        this.showNotification('Please select exactly 1 section', 'error')
         return
       }
 
-      const selectedSegmentId = this.selectedSegments[0]
+      const selectedSectionId = this.selectedSections[0]
 
-      // Find the line that contains this segment
+      // Find the line that contains this section
       let targetLine = null
-      let segmentIndex = -1
+      let sectionIndex = -1
 
       for (let line of this.lines) {
-        const index = line.segments.findIndex(seg => seg.id === selectedSegmentId)
+        const index = line.sections.findIndex(sec => sec.id === selectedSectionId)
         if (index !== -1) {
           targetLine = line
-          segmentIndex = index
+          sectionIndex = index
           break
         }
       }
 
       if (!targetLine) {
-        this.showNotification('Could not find the selected segment', 'error')
+        this.showNotification('Could not find the selected section', 'error')
         return
       }
 
-      // Check if line has more than one segment
-      if (targetLine.segments.length <= 1) {
-        this.showNotification('Cannot remove the last segment from a line', 'warning')
+      // Check if line has more than one section
+      if (targetLine.sections.length <= 1) {
+        this.showNotification('Cannot remove the last section from a line', 'warning')
         return
       }
 
-      // Remove the segment
-      targetLine.segments.splice(segmentIndex, 1)
+      // Remove the section
+      targetLine.sections.splice(sectionIndex, 1)
 
-      // Update ordinal numbers for all subsequent segments
-      for (let i = segmentIndex; i < targetLine.segments.length; i++) {
-        targetLine.segments[i].ordinal = i
+      // Update ordinal numbers for all subsequent sections
+      for (let i = sectionIndex; i < targetLine.sections.length; i++) {
+        targetLine.sections[i].ordinal = i
       }
 
-      // Remove any mutual links that reference this segment
+      // Remove any mutual links that reference this section
       this.mutualLinks = this.mutualLinks.filter(link =>
-        link.segment1 !== selectedSegmentId && link.segment2 !== selectedSegmentId
+        link.section1 !== selectedSectionId && link.section2 !== selectedSectionId
       )
 
       // Clear selection and re-render
-      this.selectedSegments = []
+      this.selectedSections = []
       this.reinitKonva()
-      this.showNotification('Segment removed successfully')
+      this.showNotification('Section removed successfully')
     },
-    calculateSegmentPositions() {
-      // Create a map of coupled segments
+    calculateSectionPositions() {
+      // Create a map of coupled sections
       const coupledMap = new Map()
 
       this.mutualLinks.forEach(link => {
-        coupledMap.set(link.segment1, link.segment2)
-        coupledMap.set(link.segment2, link.segment1)
+        coupledMap.set(link.section1, link.section2)
+        coupledMap.set(link.section2, link.section1)
       })
 
-      // First pass: identify coupled segments and make them the same length
-      const processedSegments = new Set()
+      // First pass: identify coupled sections and make them the same length
+      const processedSections = new Set()
 
       this.mutualLinks.forEach(link => {
-        if (!processedSegments.has(link.segment1) && !processedSegments.has(link.segment2)) {
-          let seg1 = null, seg2 = null
+        if (!processedSections.has(link.section1) && !processedSections.has(link.section2)) {
+          let sec1 = null, sec2 = null
 
           for (let line of this.lines) {
-            const found1 = line.segments.find(s => s.id === link.segment1)
-            const found2 = line.segments.find(s => s.id === link.segment2)
-            if (found1) seg1 = found1
-            if (found2) seg2 = found2
+            const found1 = line.sections.find(s => s.id === link.section1)
+            const found2 = line.sections.find(s => s.id === link.section2)
+            if (found1) sec1 = found1
+            if (found2) sec2 = found2
           }
 
-          if (seg1 && seg2) {
-            // Use the maximum length for both coupled segments
-            const maxLength = Math.max(seg1.length, seg2.length)
-            seg1.length = maxLength
-            seg2.length = maxLength
+          if (sec1 && sec2) {
+            // Use the maximum length for both coupled sections
+            const maxLength = Math.max(sec1.length, sec2.length)
+            sec1.length = maxLength
+            sec2.length = maxLength
 
-            processedSegments.add(link.segment1)
-            processedSegments.add(link.segment2)
+            processedSections.add(link.section1)
+            processedSections.add(link.section2)
           }
         }
       })
@@ -491,24 +491,24 @@ export default {
 
       // Clear existing positions
       this.lines.forEach(line => {
-        line.segments.forEach(segment => {
-          delete segment.startX
-          delete segment.startY
-          delete segment.endX
-          delete segment.endY
+        line.sections.forEach(section => {
+          delete section.startX
+          delete section.startY
+          delete section.endX
+          delete section.endY
         })
       })
 
-      // Second pass: calculate natural positions for all segments
+      // Second pass: calculate natural positions for all sections
       const naturalPositions = new Map()
 
       this.lines.forEach((line) => {
         let currentX = startX
-        const sortedSegments = [...line.segments].sort((a, b) => a.ordinal - b.ordinal)
+        const sortedSections = [...line.sections].sort((a, b) => a.ordinal - b.ordinal)
 
-        sortedSegments.forEach((segment) => {
-          const canvasLength = segment.length * this.pixelsPerUnit
-          naturalPositions.set(segment.id, {
+        sortedSections.forEach((section) => {
+          const canvasLength = section.length * this.pixelsPerUnit
+          naturalPositions.set(section.id, {
             startX: currentX,
             endX: currentX + canvasLength
           })
@@ -516,34 +516,34 @@ export default {
         })
       })
 
-      // Third pass: align coupled segments by using the maximum startX
+      // Third pass: align coupled sections by using the maximum startX
       const alignedPositions = new Map()
 
       this.mutualLinks.forEach(link => {
-        const pos1 = naturalPositions.get(link.segment1)
-        const pos2 = naturalPositions.get(link.segment2)
+        const pos1 = naturalPositions.get(link.section1)
+        const pos2 = naturalPositions.get(link.section2)
 
         if (pos1 && pos2) {
           // Use the maximum startX for alignment
           const alignedStartX = Math.max(pos1.startX, pos2.startX)
 
-          // Find the segments to get length
-          let seg1 = null
+          // Find the sections to get length
+          let sec1 = null
           for (let line of this.lines) {
-            const found1 = line.segments.find(s => s.id === link.segment1)
+            const found1 = line.sections.find(s => s.id === link.section1)
             if (found1) {
-              seg1 = found1
+              sec1 = found1
               break
             }
           }
 
-          const canvasLength = seg1.length * this.pixelsPerUnit
+          const canvasLength = sec1.length * this.pixelsPerUnit
 
-          alignedPositions.set(link.segment1, {
+          alignedPositions.set(link.section1, {
             startX: alignedStartX,
             endX: alignedStartX + canvasLength
           })
-          alignedPositions.set(link.segment2, {
+          alignedPositions.set(link.section2, {
             startX: alignedStartX,
             endX: alignedStartX + canvasLength
           })
@@ -555,26 +555,26 @@ export default {
         const y = yPositions[lineIndex]
         let currentX = startX
 
-        const sortedSegments = [...line.segments].sort((a, b) => a.ordinal - b.ordinal)
+        const sortedSections = [...line.sections].sort((a, b) => a.ordinal - b.ordinal)
 
-        sortedSegments.forEach((segment) => {
-          const canvasLength = segment.length * this.pixelsPerUnit
+        sortedSections.forEach((section) => {
+          const canvasLength = section.length * this.pixelsPerUnit
 
-          // Check if this segment has an aligned position
-          if (alignedPositions.has(segment.id)) {
-            const aligned = alignedPositions.get(segment.id)
+          // Check if this section has an aligned position
+          if (alignedPositions.has(section.id)) {
+            const aligned = alignedPositions.get(section.id)
             // Use the max to prevent overlap
             currentX = Math.max(currentX, aligned.startX)
-            segment.startX = currentX
-            segment.endX = currentX + canvasLength
+            section.startX = currentX
+            section.endX = currentX + canvasLength
           } else {
-            segment.startX = currentX
-            segment.endX = currentX + canvasLength
+            section.startX = currentX
+            section.endX = currentX + canvasLength
           }
 
-          segment.startY = y
-          segment.endY = y
-          currentX = segment.endX
+          section.startY = y
+          section.endY = y
+          currentX = section.endX
         })
       })
     },
@@ -586,23 +586,23 @@ export default {
 
       // Draw dotted lines for each mutual link
       this.mutualLinks.forEach(link => {
-        const seg1Data = this.segmentMap[link.segment1]
-        const seg2Data = this.segmentMap[link.segment2]
+        const sec1Data = this.sectionMap[link.section1]
+        const sec2Data = this.sectionMap[link.section2]
 
-        if (!seg1Data || !seg2Data) return
+        if (!sec1Data || !sec2Data) return
 
-        // Calculate midpoints of each segment
-        const seg1Points = seg1Data.line.points()
-        const seg1MidX = (seg1Points[0] + seg1Points[2]) / 2
-        const seg1MidY = (seg1Points[1] + seg1Points[3]) / 2
+        // Calculate midpoints of each section
+        const sec1Points = sec1Data.line.points()
+        const sec1MidX = (sec1Points[0] + sec1Points[2]) / 2
+        const sec1MidY = (sec1Points[1] + sec1Points[3]) / 2
 
-        const seg2Points = seg2Data.line.points()
-        const seg2MidX = (seg2Points[0] + seg2Points[2]) / 2
-        const seg2MidY = (seg2Points[1] + seg2Points[3]) / 2
+        const sec2Points = sec2Data.line.points()
+        const sec2MidX = (sec2Points[0] + sec2Points[2]) / 2
+        const sec2MidY = (sec2Points[1] + sec2Points[3]) / 2
 
         // Create dotted line
         const mutualLine = new Konva.Line({
-          points: [seg1MidX, seg1MidY, seg2MidX, seg2MidY],
+          points: [sec1MidX, sec1MidY, sec2MidX, sec2MidY],
           stroke: '#ff6b6b',
           strokeWidth: 2,
           dash: [5, 5],
@@ -614,29 +614,29 @@ export default {
 
       this.mutualLinesLayer.batchDraw()
     },
-    selectSegment(segmentId, shiftKey, allSegments) {
+    selectSection(sectionId, shiftKey, allSections) {
       if (shiftKey) {
-        // Multi-select: toggle segment
-        const index = this.selectedSegments.indexOf(segmentId)
+        // Multi-select: toggle section
+        const index = this.selectedSections.indexOf(sectionId)
         if (index > -1) {
-          this.selectedSegments.splice(index, 1)
+          this.selectedSections.splice(index, 1)
         } else {
-          this.selectedSegments.push(segmentId)
+          this.selectedSections.push(sectionId)
         }
       } else {
         // Single select: replace selection
-        this.selectedSegments = [segmentId]
+        this.selectedSections = [sectionId]
       }
 
-      // Update visual state of all segments
-      allSegments.forEach(seg => {
-        const isSelected = this.selectedSegments.includes(seg.id)
+      // Update visual state of all sections
+      allSections.forEach(sec => {
+        const isSelected = this.selectedSections.includes(sec.id)
         if (isSelected) {
-          seg.line.strokeWidth(6)
-          seg.line.shadowEnabled(true)
+          sec.line.strokeWidth(6)
+          sec.line.shadowEnabled(true)
         } else {
-          seg.line.strokeWidth(4)
-          seg.line.shadowEnabled(false)
+          sec.line.strokeWidth(4)
+          sec.line.shadowEnabled(false)
         }
       })
     },
@@ -665,8 +665,8 @@ export default {
       // Store reference to mutual lines layer
       this.mutualLinesLayer = mutualLinesLayer
 
-      // Track all segments for selection
-      const allSegments = []
+      // Track all sections for selection
+      const allSections = []
       const allEndpoints = []
 
       // Create tooltip text (initially hidden)
@@ -707,22 +707,22 @@ export default {
         })
       }
 
-      // Create lines and segments based on data
+      // Create lines and sections based on data
       this.lines.forEach((lineData, lineIndex) => {
         const lineColor = colors[lineIndex]
 
         // Track endpoints for this line
         const lineEndpoints = []
 
-        // Create each segment
-        lineData.segments.forEach((segmentData, segIndex) => {
-          const segmentId = segmentData.id
+        // Create each section
+        lineData.sections.forEach((sectionData, secIndex) => {
+          const sectionId = sectionData.id
 
           // Use stored positions or calculate defaults
-          const startX = segmentData.startX !== undefined ? segmentData.startX : 50
-          const startY = segmentData.startY !== undefined ? segmentData.startY : yPositions[lineIndex]
-          const endX = segmentData.endX !== undefined ? segmentData.endX : 350
-          const endY = segmentData.endY !== undefined ? segmentData.endY : yPositions[lineIndex]
+          const startX = sectionData.startX !== undefined ? sectionData.startX : 50
+          const startY = sectionData.startY !== undefined ? sectionData.startY : yPositions[lineIndex]
+          const endX = sectionData.endX !== undefined ? sectionData.endX : 350
+          const endY = sectionData.endY !== undefined ? sectionData.endY : yPositions[lineIndex]
 
           const line = new Konva.Line({
             points: [startX, startY, endX, endY],
@@ -737,12 +737,12 @@ export default {
             shadowEnabled: false
           })
 
-          // Track segment
-          allSegments.push({ id: segmentId, line: line })
-          this.segmentMap[segmentId] = { id: segmentId, line: line, segment: segmentData, lineData: lineData }
+          // Track section
+          allSections.push({ id: sectionId, line: line })
+          this.sectionMap[sectionId] = { id: sectionId, line: line, section: sectionData, lineData: lineData }
 
-          // Create start endpoint (only for first segment in line)
-          if (segIndex === 0) {
+          // Create start endpoint (only for first section in line)
+          if (secIndex === 0) {
             const startPoint = new Konva.Rect({
               x: startX - 6,
               y: startY - 6,
@@ -768,8 +768,8 @@ export default {
               ])
 
               // Update stored position
-              segmentData.startX = newX
-              segmentData.startY = newY
+              sectionData.startX = newX
+              sectionData.startY = newY
 
               layer.batchDraw()
               this.drawMutualLinks()
@@ -793,8 +793,8 @@ export default {
             name: 'endpoint'
           })
 
-          // Store reference to next segment's line if it exists
-          const nextSegment = lineData.segments[segIndex + 1]
+          // Store reference to next section's line if it exists
+          const nextSection = lineData.sections[secIndex + 1]
 
           endPoint.on('dragmove', () => {
             const pos = endPoint.position()
@@ -809,23 +809,23 @@ export default {
             ])
 
             // Update stored position
-            segmentData.endX = newX
-            segmentData.endY = newY
+            sectionData.endX = newX
+            sectionData.endY = newY
 
-            // If there's a next segment, update its start point
-            if (nextSegment) {
-              const nextSegmentLine = this.segmentMap[nextSegment.id].line
-              const nextPoints = nextSegmentLine.points()
-              nextSegmentLine.points([
+            // If there's a next section, update its start point
+            if (nextSection) {
+              const nextSectionLine = this.sectionMap[nextSection.id].line
+              const nextPoints = nextSectionLine.points()
+              nextSectionLine.points([
                 newX,
                 newY,
                 nextPoints[2],
                 nextPoints[3]
               ])
 
-              // Update next segment's stored start position
-              nextSegment.startX = newX
-              nextSegment.startY = newY
+              // Update next section's stored start position
+              nextSection.startX = newX
+              nextSection.startY = newY
             }
 
             layer.batchDraw()
@@ -836,12 +836,12 @@ export default {
           lineEndpoints.push(endPoint)
           allEndpoints.push(endPoint)
 
-          // Add hover tooltip showing segment name
-          const segmentInfo = { name: segmentData.name, lineName: lineData.name, length: segmentData.length }
+          // Add hover tooltip showing section name
+          const sectionInfo = { name: sectionData.name, lineName: lineData.name, length: sectionData.length }
           line.on('mouseenter', (e) => {
             stage.container().style.cursor = 'pointer'
             const mousePos = stage.getPointerPosition()
-            tooltip.text(segmentInfo.name + ' | ' + segmentInfo.length)
+            tooltip.text(sectionInfo.name + ' | ' + sectionInfo.length)
             tooltip.position({
               x: mousePos.x + 10,
               y: mousePos.y - 30
@@ -868,7 +868,7 @@ export default {
 
           // Add click handler for selection
           line.on('click', (e) => {
-            this.selectSegment(segmentId, e.evt.shiftKey, allSegments)
+            this.selectSection(sectionId, e.evt.shiftKey, allSections)
             layer.batchDraw()
           })
 
@@ -876,7 +876,7 @@ export default {
         })
       })
 
-      // Add all endpoints on top of segments so they're always clickable
+      // Add all endpoints on top of sections so they're always clickable
       allEndpoints.forEach(endpoint => {
         layer.add(endpoint)
       })
@@ -892,10 +892,10 @@ export default {
       // Click on empty space to deselect all
       stage.on('click', (e) => {
         if (e.target === stage) {
-          this.selectedSegments = []
-          allSegments.forEach(seg => {
-            seg.line.strokeWidth(4)
-            seg.line.shadowEnabled(false)
+          this.selectedSections = []
+          allSections.forEach(sec => {
+            sec.line.strokeWidth(4)
+            sec.line.shadowEnabled(false)
           })
           layer.batchDraw()
         }
@@ -944,11 +944,11 @@ export default {
       let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
 
       this.lines.forEach(line => {
-        line.segments.forEach(segment => {
-          minX = Math.min(minX, segment.startX, segment.endX)
-          minY = Math.min(minY, segment.startY, segment.endY)
-          maxX = Math.max(maxX, segment.startX, segment.endX)
-          maxY = Math.max(maxY, segment.startY, segment.endY)
+        line.sections.forEach(section => {
+          minX = Math.min(minX, section.startX, section.endX)
+          minY = Math.min(minY, section.startY, section.endY)
+          maxX = Math.max(maxX, section.startX, section.endX)
+          maxY = Math.max(maxY, section.startY, section.endY)
         })
       })
 
@@ -981,11 +981,11 @@ export default {
         this.stage.destroy()
       }
 
-      // Clear the segment map
-      this.segmentMap = {}
+      // Clear the section map
+      this.sectionMap = {}
 
       // Recalculate positions
-      this.calculateSegmentPositions()
+      this.calculateSectionPositions()
 
       // Re-initialize the canvas
       this.initKonva()
