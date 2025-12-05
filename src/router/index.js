@@ -7,6 +7,7 @@ import UpdateProperties from '../views/UpdateProperties.vue'
 import Related from '../views/Related.vue'
 import RightClick from '../views/RightClick.vue'
 import Terminal from '../views/Terminal.vue'
+import TerminalCRUD from '../views/TerminalCRUD.vue'
 
 const routes = [
   {
@@ -53,6 +54,11 @@ const routes = [
     name: 'Terminal',
     component: Terminal
   },
+  {
+    path: '/terminal-crud',
+    name: 'TerminalCRUD',
+    component: TerminalCRUD
+  },  
 ]
 
 const router = createRouter({

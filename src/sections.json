@@ -1,0 +1,98 @@
+[
+  {
+    "section_id": 1,
+    "branch_id": 1,
+    "section_n": 1,
+    "section_name": "Sol - Str 10",
+    "length_mi": 2.4,
+    "conductor": "795 ACSR 26/7"
+  },
+  {
+    "section_id": 2,
+    "branch_id": 1,
+    "section_n": 2,
+    "section_name": "Str 10 - Str 20",
+    "length_mi": 1.4,
+    "conductor": "795 ACSR 26/7"
+  },
+  {
+    "section_id": 3,
+    "branch_id": 1,
+    "section_n": 3,
+    "section_name": "Str 20 - Str 30",
+    "length_mi": 0.4,
+    "conductor": "795 ACSR 26/7"
+  },
+  {
+    "section_id": 4,
+    "branch_id": 1,
+    "section_n": 4,
+    "section_name": "Str 30 - Luna",
+    "length_mi": 5,
+    "conductor": "795 ACSR 26/7"
+  },
+  {
+    "section_id": 5,
+    "branch_id": 2,
+    "section_n": 1,
+    "section_name": "Sol - Str 10",
+    "length_mi": 2.4,
+    "conductor": "1590 ACSR 54/7"
+  },
+  {
+    "section_id": 6,
+    "branch_id": 2,
+    "section_n": 2,
+    "section_name": "Str 10 - Str 20",
+    "length_mi": 1.4,
+    "conductor": "1590 ACSR 54/7"
+  },
+  {
+    "section_id": 7,
+    "branch_id": 2,
+    "section_n": 3,
+    "section_name": "Str 20 - Str 30",
+    "length_mi": 0.4,
+    "conductor": "1590 ACSR 54/7"
+  },
+  {
+    "section_id": 8,
+    "branch_id": 2,
+    "section_n": 4,
+    "section_name": "Str 30 - Luna",
+    "length_mi": 5,
+    "conductor": "1590 ACSR 54/7"
+  },
+  {
+    "section_id": 9,
+    "branch_id": 3,
+    "section_n": 1,
+    "section_name": "Sol - Str x",
+    "length_mi": 2.4,
+    "conductor": "4/0 ACSR"
+  },
+  {
+    "section_id": 10,
+    "branch_id": 3,
+    "section_n": 2,
+    "section_name": "Str x - Eart",
+    "length_mi": 12,
+    "conductor": "4/0 ACSR"
+  },
+  {
+    "section_id": 11,
+    "branch_id": 4,
+    "section_n": 1,
+    "section_name": "Luna - Str y",
+    "length_mi": 0.4,
+    "conductor": "336 ACSR"
+  },
+  {
+    "section_id": 12,
+    "branch_id": 4,
+    "section_n": 2,
+    "section_name": "Str y - Earth",
+    "length_mi": 12,
+    "conductor": "336 ACSR"
+  }
+]

@@ -1,0 +1,290 @@
+[
+  {
+    "branch_id": 1,
+    "branch_name": "Sol - Luna #1",
+    "node_name": "Sol",
+    "node_id": 1,
+    "equip_name": "Breaker 1200A",
+    "equip_rating": 1200,
+    "equip_id": 100
+  },
+  {
+    "branch_id": 1,
+    "branch_name": "Sol - Luna #1",
+    "node_name": "Sol",
+    "node_id": 1,
+    "equip_name": "BusBar 4in",
+    "equip_rating": 1500,
+    "equip_id": 101
+  },
+  {
+    "branch_id": 1,
+    "branch_name": "Sol - Luna #1",
+    "node_name": "Sol",
+    "node_id": 1,
+    "equip_name": "Disconnect Switch",
+    "equip_rating": 1200,
+    "equip_id": 102
+  },
+  {
+    "branch_id": 1,
+    "branch_name": "Sol - Luna #1",
+    "node_name": "Sol",
+    "node_id": 1,
+    "equip_name": "CT 1200:5",
+    "equip_rating": 1200,
+    "equip_id": 103
+  },
+  {
+    "branch_id": 1,
+    "branch_name": "Sol - Luna #1",
+    "node_name": "Luna",
+    "node_id": 2,
+    "equip_name": "Breaker 1500A",
+    "equip_rating": 1500,
+    "equip_id": 104
+  },
+  {
+    "branch_id": 1,
+    "branch_name": "Sol - Luna #1",
+    "node_name": "Luna",
+    "node_id": 2,
+    "equip_name": "BusBar 3in",
+    "equip_rating": 1300,
+    "equip_id": 105
+  },
+  {
+    "branch_id": 1,
+    "branch_name": "Sol - Luna #1",
+    "node_name": "Luna",
+    "node_id": 2,
+    "equip_name": "Disconnect Switch",
+    "equip_rating": 1500,
+    "equip_id": 106
+  },
+  {
+    "branch_id": 1,
+    "branch_name": "Sol - Luna #1",
+    "node_name": "Luna",
+    "node_id": 2,
+    "equip_name": "CT 1500:5",
+    "equip_rating": 1500,
+    "equip_id": 107
+  },
+  {
+    "branch_id": 2,
+    "branch_name": "Sol - Luna #2",
+    "node_name": "Sol",
+    "node_id": 1,
+    "equip_name": "Breaker 1500A",
+    "equip_rating": 1500,
+    "equip_id": 200
+  },
+  {
+    "branch_id": 2,
+    "branch_name": "Sol - Luna #2",
+    "node_name": "Sol",
+    "node_id": 1,
+    "equip_name": "BusBar 4in",
+    "equip_rating": 1500,
+    "equip_id": 201
+  },
+  {
+    "branch_id": 2,
+    "branch_name": "Sol - Luna #2",
+    "node_name": "Sol",
+    "node_id": 1,
+    "equip_name": "Disconnect Switch",
+    "equip_rating": 1500,
+    "equip_id": 202
+  },
+  {
+    "branch_id": 2,
+    "branch_name": "Sol - Luna #2",
+    "node_name": "Sol",
+    "node_id": 1,
+    "equip_name": "CT 1500:5",
+    "equip_rating": 1500,
+    "equip_id": 203
+  },
+  {
+    "branch_id": 2,
+    "branch_name": "Sol - Luna #2",
+    "node_name": "Luna",
+    "node_id": 2,
+    "equip_name": "Breaker 1800A",
+    "equip_rating": 1800,
+    "equip_id": 204
+  },
+  {
+    "branch_id": 2,
+    "branch_name": "Sol - Luna #2",
+    "node_name": "Luna",
+    "node_id": 2,
+    "equip_name": "BusBar 3in",
+    "equip_rating": 1800,
+    "equip_id": 205
+  },
+  {
+    "branch_id": 2,
+    "branch_name": "Sol - Luna #2",
+    "node_name": "Luna",
+    "node_id": 2,
+    "equip_name": "Disconnect Switch",
+    "equip_rating": 1800,
+    "equip_id": 206
+  },
+  {
+    "branch_id": 2,
+    "branch_name": "Sol - Luna #2",
+    "node_name": "Luna",
+    "node_id": 2,
+    "equip_name": "PT 138kV",
+    "equip_rating": 138,
+    "equip_id": 207
+  },
+  {
+    "branch_id": 3,
+    "branch_name": "Sol - Earth #1",
+    "node_name": "Sol",
+    "node_id": 1,
+    "equip_name": "Breaker 2000A",
+    "equip_rating": 2000,
+    "equip_id": 300
+  },
+  {
+    "branch_id": 3,
+    "branch_name": "Sol - Earth #1",
+    "node_name": "Sol",
+    "node_id": 1,
+    "equip_name": "BusBar 4in",
+    "equip_rating": 2000,
+    "equip_id": 301
+  },
+  {
+    "branch_id": 3,
+    "branch_name": "Sol - Earth #1",
+    "node_name": "Sol",
+    "node_id": 1,
+    "equip_name": "Disconnect Switch",
+    "equip_rating": 2000,
+    "equip_id": 302
+  },
+  {
+    "branch_id": 3,
+    "branch_name": "Sol - Earth #1",
+    "node_name": "Sol",
+    "node_id": 1,
+    "equip_name": "CT 2000:5",
+    "equip_rating": 2000,
+    "equip_id": 303
+  },
+  {
+    "branch_id": 3,
+    "branch_name": "Sol - Earth #1",
+    "node_name": "Earth",
+    "node_id": 3,
+    "equip_name": "Breaker 1800A",
+    "equip_rating": 1800,
+    "equip_id": 304
+  },
+  {
+    "branch_id": 3,
+    "branch_name": "Sol - Earth #1",
+    "node_name": "Earth",
+    "node_id": 3,
+    "equip_name": "BusBar 5in",
+    "equip_rating": 1800,
+    "equip_id": 305
+  },
+  {
+    "branch_id": 3,
+    "branch_name": "Sol - Earth #1",
+    "node_name": "Earth",
+    "node_id": 3,
+    "equip_name": "Disconnect Switch",
+    "equip_rating": 1800,
+    "equip_id": 306
+  },
+  {
+    "branch_id": 3,
+    "branch_name": "Sol - Earth #1",
+    "node_name": "Earth",
+    "node_id": 3,
+    "equip_name": "PT 138kV",
+    "equip_rating": 138,
+    "equip_id": 307
+  },
+  {
+    "branch_id": 4,
+    "branch_name": "Luna - Earth #1",
+    "node_name": "Luna",
+    "node_id": 2,
+    "equip_name": "Breaker 1600A",
+    "equip_rating": 1600,
+    "equip_id": 400
+  },
+  {
+    "branch_id": 4,
+    "branch_name": "Luna - Earth #1",
+    "node_name": "Luna",
+    "node_id": 2,
+    "equip_name": "BusBar 3in",
+    "equip_rating": 1600,
+    "equip_id": 401
+  },
+  {
+    "branch_id": 4,
+    "branch_name": "Luna - Earth #1",
+    "node_name": "Luna",
+    "node_id": 2,
+    "equip_name": "Disconnect Switch",
+    "equip_rating": 1600,
+    "equip_id": 402
+  },
+  {
+    "branch_id": 4,
+    "branch_name": "Luna - Earth #1",
+    "node_name": "Luna",
+    "node_id": 2,
+    "equip_name": "CT 1600:5",
+    "equip_rating": 1600,
+    "equip_id": 403
+  },
+  {
+    "branch_id": 4,
+    "branch_name": "Luna - Earth #1",
+    "node_name": "Earth",
+    "node_id": 3,
+    "equip_name": "Breaker 2000A",
+    "equip_rating": 2000,
+    "equip_id": 404
+  },
+  {
+    "branch_id": 4,
+    "branch_name": "Luna - Earth #1",
+    "node_name": "Earth",
+    "node_id": 3,
+    "equip_name": "BusBar 5in",
+    "equip_rating": 2000,
+    "equip_id": 405
+  },
+  {
+    "branch_id": 4,
+    "branch_name": "Luna - Earth #1",
+    "node_name": "Earth",
+    "node_id": 3,
+    "equip_name": "Disconnect Switch",
+    "equip_rating": 2000,
+    "equip_id": 406
+  },
+  {
+    "branch_id": 4,
+    "branch_name": "Luna - Earth #1",
+    "node_name": "Earth",
+    "node_id": 3,
+    "equip_name": "CT 2000:5",
+    "equip_rating": 2000,
+    "equip_id": 407
+  }
+]
