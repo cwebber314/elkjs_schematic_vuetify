@@ -4,10 +4,10 @@
     <v-row class="schematic-section">
       <v-col>
         <SchematicEditor2
-          :netlist-data="netlistData"
+          :networkData="networkData"
           :width="editorWidth"
           :height="editorHeight"
-          @node-click="handleNodeClick"
+          @bus-click="handleBusClick"
           @edge-click="handleEdgeClick"
           @terminal-click="handleTerminalClick"
           @selection-changed="handleSelectionChanged"
@@ -251,7 +251,7 @@
 
 
 <script>
-import netlistData from '../netlist.json'
+import networkData from '../netlist2.json'
 import terminalEquipmentData from '../terminal_equipment.json'
 import sectionsData from '../sections.json'
 import SchematicEditor2 from '../components/SchematicEditor2.vue'
@@ -271,13 +271,13 @@ export default {
   },
   data() {
     return {
-      netlistData,
+      networkData: networkData,
       terminalEquipmentData: [...terminalEquipmentData],
       loading: false,
       error: null,
-      selectedNodes: [],
+      selectedBuses: [],
       selectedEdges: [],
-      activeTerminals: {},
+      selectedTerminals: [],
       activeTab: 'branches',
       expandedSectionGroups: [],
       editorWidth: window.innerWidth - 48,
@@ -298,16 +298,16 @@ export default {
         { title: 'Actions', key: 'actions', sortable: false, width: '80px' },
         { title: 'ID', key: 'id', sortable: true },
         { title: 'Name', key: 'name', sortable: true },
-        { title: 'Node 1', key: 'node1_name', sortable: true },
-        { title: 'Node 2', key: 'node2_name', sortable: true },
-        { title: 'Node 1 ID', key: 'node1_id', sortable: true },
-        { title: 'Node 2 ID', key: 'node2_id', sortable: true }
+        { title: 'Bus 1', key: 'bus1_name', sortable: true },
+        { title: 'Bus 2', key: 'bus2_name', sortable: true },
+        { title: 'Bus 1 ID', key: 'bus1_id', sortable: true },
+        { title: 'Bus 2 ID', key: 'bus2_id', sortable: true }
       ],
       bussesHeaders: [
         { title: 'Actions', key: 'actions', sortable: false, width: '80px' },
         { title: 'ID', key: 'id', sortable: true },
         { title: 'Name', key: 'name', sortable: true },
-        { title: 'Node Number', key: 'node_num', sortable: true },
+        { title: 'Bus Number', key: 'bus_num', sortable: true },
         { title: 'kV', key: 'kv', sortable: true }
       ],
       sectionsHeaders: [
@@ -326,9 +326,9 @@ export default {
         { title: 'Equipment Name', key: 'equip_name', sortable: true },
         { title: 'Rating', key: 'equip_rating', sortable: true },
         { title: 'Branch', key: 'branch_name', sortable: true },
-        { title: 'Node', key: 'node_name', sortable: true },
+        { title: 'Bus', key: 'bus_name', sortable: true },
         { title: 'Branch ID', key: 'branch_id', sortable: true },
-        { title: 'Node ID', key: 'node_id', sortable: true }
+        { title: 'Bus ID', key: 'bus_id', sortable: true }
       ]
     }
   },
@@ -336,30 +336,30 @@ export default {
     selectedBranches() {
       // Get selected edges and combine with original branch data
       return this.selectedEdges.map(edge => {
-        const branchData = netlistData.branches.find(b => b.id === parseInt(edge.id))
-        const node1 = netlistData.nodes.find(n => n.id === branchData.node1_id)
-        const node2 = netlistData.nodes.find(n => n.id === branchData.node2_id)
+        const branchData = networkData.branches.find(b => b.id === parseInt(edge.id))
+        const bus1 = networkData.buses.find(b => b.id === branchData.bus1_id)
+        const bus2 = networkData.buses.find(b => b.id === branchData.bus2_id)
 
         return {
           id: branchData.id,
           name: branchData.name,
-          node1_id: branchData.node1_id,
-          node2_id: branchData.node2_id,
-          node1_name: node1 ? node1.name : 'Unknown',
-          node2_name: node2 ? node2.name : 'Unknown'
+          bus1_id: branchData.bus1_id,
+          bus2_id: branchData.bus2_id,
+          bus1_name: bus1 ? bus1.name : 'Unknown',
+          bus2_name: bus2 ? bus2.name : 'Unknown'
         }
       })
     },
     selectedBusses() {
-      // Get selected nodes and combine with original node data
-      return this.selectedNodes.map(node => {
-        const nodeData = netlistData.nodes.find(n => n.id === parseInt(node.id))
+      // Get selected buses and combine with original bus data
+      return this.selectedBuses.map(bus => {
+        const busData = networkData.buses.find(b => b.id === parseInt(bus.id))
 
         return {
-          id: nodeData.id,
-          name: nodeData.name,
-          node_num: nodeData.node_num,
-          kv: nodeData.kv
+          id: busData.id,
+          name: busData.name,
+          bus_num: busData.bus_num,
+          kv: busData.kv
         }
       })
     },
@@ -372,7 +372,7 @@ export default {
 
       // Find all sections for selected branches
       selectedBranchIds.forEach((branchId) => {
-        const branchData = netlistData.branches.find(b => b.id === branchId)
+        const branchData = networkData.branches.find(b => b.id === branchId)
         const branchName = branchData ? branchData.name : `Branch ${branchId}`
         const branchSections = sectionsData.filter(section => section.branch_id === branchId)
 
@@ -422,35 +422,15 @@ export default {
       const equipment = []
 
       // Iterate through all active terminals
-      Object.keys(this.activeTerminals).forEach(edgeId => {
-        const terminals = this.activeTerminals[edgeId]
-        const branchData = netlistData.branches.find(b => b.id === parseInt(edgeId))
+      this.selectedTerminals.forEach(terminal => {
+        const branchId = terminal.branch
+        const busId = terminal.bus
 
-        if (!branchData) return
-
-        // Check start terminal
-        if (terminals.start) {
-          const nodeId = branchData.node1_id
-          const branchId = branchData.id
-
-          // Find all equipment for this branch and node
-          const terminalEquip = this.terminalEquipmentData.filter(
-            eq => eq.branch_id === branchId && eq.node_id === nodeId
-          )
-          equipment.push(...terminalEquip)
-        }
-
-        // Check end terminal
-        if (terminals.end) {
-          const nodeId = branchData.node2_id
-          const branchId = branchData.id
-
-          // Find all equipment for this branch and node
-          const terminalEquip = this.terminalEquipmentData.filter(
-            eq => eq.branch_id === branchId && eq.node_id === nodeId
-          )
-          equipment.push(...terminalEquip)
-        }
+        // Find all equipment for this branch and bus
+        const terminalEquip = this.terminalEquipmentData.filter(
+          eq => eq.branch_id === branchId && eq.bus_id === busId
+        )
+        equipment.push(...terminalEquip)
       })
 
       return equipment
@@ -483,13 +463,13 @@ export default {
     sumSectionLengths(sections) {
       return sections.reduce((sum, section) => sum + section.length_mi, 0)
     },
-    handleSelectionChanged({ nodes, edges, terminals }) {
-      this.selectedNodes = nodes
+    handleSelectionChanged({ buses, edges, terminals }) {
+      this.selectedBuses = buses
       this.selectedEdges = edges
-      this.activeTerminals = terminals
+      this.selectedTerminals = terminals
     },
-    handleNodeClick(node) {
-      if (node.selected) {
+    handleBusClick(bus) {
+      if (bus.selected) {
         this.activeTab = 'busses'
       }
     },
@@ -510,15 +490,15 @@ export default {
     handlePropertiesClick({ objectType, targetObject }) {
       console.log('Properties clicked from context menu:', objectType, targetObject)
 
-      if (objectType === 'Node') {
+      if (objectType === 'Bus') {
         // Open EditNode dialog
-        const nodeData = netlistData.nodes.find(n => n.id === parseInt(targetObject.id))
+        const busData = networkData.buses.find(b => b.id === parseInt(targetObject.id))
 
         this.currentBus = {
           id: targetObject.id,
           name: targetObject.name,
-          node_num: nodeData ? nodeData.node_num : '',
-          kv: nodeData ? nodeData.kv : '',
+          bus_num: busData ? busData.bus_num : '',
+          kv: busData ? busData.kv : '',
           x: targetObject.x || 0,
           y: targetObject.y || 0,
           width: targetObject.width || 0,
@@ -527,13 +507,13 @@ export default {
         this.showBusDialog = true
       } else if (objectType === 'Branch') {
         // Open EditEdge dialog
-        const branchData = netlistData.branches.find(b => b.id === parseInt(targetObject.id))
+        const branchData = networkData.branches.find(b => b.id === parseInt(targetObject.id))
 
         this.currentBranch = {
           id: targetObject.id,
           name: targetObject.name,
-          node1_id: branchData ? branchData.node1_id : '',
-          node2_id: branchData ? branchData.node2_id : '',
+          bus1_id: branchData ? branchData.bus1_id : '',
+          bus2_id: branchData ? branchData.bus2_id : '',
           ckt: branchData ? branchData.ckt : '',
           labelX: targetObject.labelX || 0,
           labelY: targetObject.labelY || 0,
@@ -609,13 +589,13 @@ export default {
     },
     viewBus(item) {
       console.log('View bus:', item)
-      // We don't have layoutNode anymore, so just use the basic data
-      const nodeData = netlistData.nodes.find(n => n.id === item.id)
+      // We don't have layoutBus anymore, so just use the basic data
+      const busData = networkData.buses.find(b => b.id === item.id)
 
       this.currentBus = {
         id: item.id,
         name: item.name,
-        node_num: item.node_num,
+        bus_num: item.bus_num,
         kv: item.kv,
         x: 0,
         y: 0,
@@ -627,13 +607,13 @@ export default {
     viewBranch(item) {
       console.log('View branch:', item)
       // We don't have layoutEdge anymore, so just use the basic data
-      const branchData = netlistData.branches.find(b => b.id === item.id)
+      const branchData = networkData.branches.find(b => b.id === item.id)
 
       this.currentBranch = {
         id: item.id,
         name: item.name,
-        node1_id: item.node1_id,
-        node2_id: item.node2_id,
+        bus1_id: item.bus1_id,
+        bus2_id: item.bus2_id,
         ckt: branchData ? branchData.ckt : '',
         labelX: 0,
         labelY: 0,

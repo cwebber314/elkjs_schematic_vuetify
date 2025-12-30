@@ -2,7 +2,7 @@
   <v-dialog v-model="show" max-width="600px">
     <v-card>
       <v-card-title>
-        <span class="text-h5">Edit Node Properties</span>
+        <span class="text-h5">Edit Edge Properties</span>
       </v-card-title>
 
       <v-card-text>
@@ -10,7 +10,7 @@
           <v-row>
             <v-col cols="12">
               <v-text-field
-                v-model="editedNode.id"
+                v-model="editedEdge.id"
                 label="ID"
                 disabled
                 variant="outlined"
@@ -21,7 +21,7 @@
           <v-row>
             <v-col cols="12">
               <v-text-field
-                v-model="editedNode.name"
+                v-model="editedEdge.name"
                 label="Name"
                 variant="outlined"
               ></v-text-field>
@@ -29,18 +29,30 @@
           </v-row>
 
           <v-row>
-            <v-col cols="6">
+            <v-col cols="4">
               <v-text-field
-                v-model="editedNode.node_num"
-                label="Node Number"
+                v-model.number="editedEdge.bus1_id"
+                label="Bus 1 ID"
+                type="number"
+                disabled
                 variant="outlined"
               ></v-text-field>
             </v-col>
 
-            <v-col cols="6">
+            <v-col cols="4">
               <v-text-field
-                v-model="editedNode.kv"
-                label="kV"
+                v-model.number="editedEdge.bus2_id"
+                label="Bus 2 ID"
+                type="number"
+                disabled
+                variant="outlined"
+              ></v-text-field>
+            </v-col>
+
+            <v-col cols="4">
+              <v-text-field
+                v-model="editedEdge.ckt"
+                label="Circuit"
                 variant="outlined"
               ></v-text-field>
             </v-col>
@@ -49,44 +61,34 @@
           <v-row>
             <v-col cols="6">
               <v-text-field
-                v-model.number="editedNode.x"
-                label="X Position"
+                v-model.number="editedEdge.labelX"
+                label="Label X Position"
                 type="number"
-                variant="outlined"
                 disabled
+                variant="outlined"
               ></v-text-field>
             </v-col>
 
             <v-col cols="6">
               <v-text-field
-                v-model.number="editedNode.y"
-                label="Y Position"
+                v-model.number="editedEdge.labelY"
+                label="Label Y Position"
                 type="number"
-                variant="outlined"
                 disabled
+                variant="outlined"
               ></v-text-field>
             </v-col>
           </v-row>
 
           <v-row>
-            <v-col cols="6">
-              <v-text-field
-                v-model.number="editedNode.width"
-                label="Width"
-                type="number"
-                variant="outlined"
+            <v-col cols="12">
+              <v-textarea
+                v-model="pointsDisplay"
+                label="Points (read-only)"
                 disabled
-              ></v-text-field>
-            </v-col>
-
-            <v-col cols="6">
-              <v-text-field
-                v-model.number="editedNode.height"
-                label="Height"
-                type="number"
                 variant="outlined"
-                disabled
-              ></v-text-field>
+                rows="3"
+              ></v-textarea>
             </v-col>
           </v-row>
         </v-container>
@@ -94,7 +96,7 @@
 
       <v-card-actions>
         <v-spacer></v-spacer>
-        <v-btn variant="text" @click="cancel">
+        <v-btn color="grey" variant="text" @click="cancel">
           Cancel
         </v-btn>
         <v-btn color="primary" variant="text" @click="save" :loading="saving">
@@ -107,13 +109,13 @@
 
 <script>
 export default {
-  name: 'EditNode',
+  name: 'EditEdge',
   props: {
     modelValue: {
       type: Boolean,
       default: false
     },
-    node: {
+    edge: {
       type: Object,
       default: null
     }
@@ -122,15 +124,15 @@ export default {
   data() {
     return {
       saving: false,
-      editedNode: {
+      editedEdge: {
         id: '',
         name: '',
-        node_num: '',
-        kv: '',
-        x: 0,
-        y: 0,
-        width: 0,
-        height: 0
+        bus1_id: 0,
+        bus2_id: 0,
+        ckt: '',
+        labelX: 0,
+        labelY: 0,
+        points: []
       }
     }
   },
@@ -142,15 +144,26 @@ export default {
       set(value) {
         this.$emit('update:modelValue', value)
       }
+    },
+    pointsDisplay() {
+      if (!this.editedEdge.points || this.editedEdge.points.length === 0) {
+        return ''
+      }
+      // Format points array as pairs of coordinates
+      const pairs = []
+      for (let i = 0; i < this.editedEdge.points.length; i += 2) {
+        pairs.push(`(${this.editedEdge.points[i]}, ${this.editedEdge.points[i + 1]})`)
+      }
+      return pairs.join(' -> ')
     }
   },
   watch: {
-    node: {
+    edge: {
       immediate: true,
-      handler(newNode) {
-        if (newNode) {
-          // Copy all attributes from the node
-          this.editedNode = { ...newNode }
+      handler(newEdge) {
+        if (newEdge) {
+          // Copy all attributes from the edge
+          this.editedEdge = { ...newEdge }
         }
       }
     }
@@ -163,30 +176,30 @@ export default {
       this.saving = true
 
       try {
-        // Mock fetch call to save node properties
-        await this.mockUpdateNode(this.editedNode)
+        // Mock fetch call to save edge properties
+        await this.mockUpdateEdge(this.editedEdge)
 
-        // Emit save event with updated node data
-        this.$emit('save', { ...this.editedNode })
+        // Emit save event with updated edge data
+        this.$emit('save', { ...this.editedEdge })
 
         this.show = false
       } catch (error) {
-        console.error('Error saving node:', error)
+        console.error('Error saving edge:', error)
       } finally {
         this.saving = false
       }
     },
-    async mockUpdateNode(nodeData) {
+    async mockUpdateEdge(edgeData) {
       // Simulate an API call with a delay
       return new Promise((resolve) => {
         setTimeout(() => {
-          console.log('Mock API: Updating node with data:', nodeData)
+          console.log('Mock API: Updating edge with data:', edgeData)
 
           // Simulate a successful response
           resolve({
             success: true,
-            data: nodeData,
-            message: 'Node updated successfully'
+            data: edgeData,
+            message: 'Edge updated successfully'
           })
         }, 500)
       })

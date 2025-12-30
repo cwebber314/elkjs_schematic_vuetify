@@ -54,20 +54,20 @@
             }"
           />
 
-          <!-- Draw nodes as rectangles -->
+          <!-- Draw buses as rectangles -->
           <v-group
-            v-for="node in visibleNodes"
-            :key="'node-' + node.id">
+            v-for="bus in visibleBuses"
+            :key="'bus-' + bus.id">
             <v-rect
-              :config="getNodeConfig(node)"
-              @click="handleNodeClick(node, $event)"
-              @contextmenu="handleNodeRightClick(node, $event)"
+              :config="getBusConfig(bus)"
+              @click="handleBusClick(bus, $event)"
+              @contextmenu="handleBusRightClick(bus, $event)"
             />
             <v-text
               :config="{
-                x: node.labelX,
-                y: node.labelY,
-                text: node.name,
+                x: bus.labelX,
+                y: bus.labelY,
+                text: bus.name,
                 fontSize: 14,
                 fontStyle: 'bold',
                 fill: '#000'
@@ -94,7 +94,7 @@
           <v-list-item @click="handleProperties">
             <v-list-item-title>Properties</v-list-item-title>
           </v-list-item>
-          <v-list-item v-if="contextMenu.objectType === 'Node'" @click="handleGrow">
+          <v-list-item v-if="contextMenu.objectType === 'Bus'" @click="handleGrow">
             <v-list-item-title>Grow</v-list-item-title>
           </v-list-item>
           <v-list-item @click="handleHide">
@@ -112,7 +112,7 @@ import ELK from 'elkjs/lib/elk.bundled.js'
 export default {
   name: 'SchematicEditor2',
   props: {
-    netlistData: {
+    networkData: {
       type: Object,
       required: true
     },
@@ -126,10 +126,10 @@ export default {
     }
   },
   emits: [
-    'node-click',
+    'bus-click',
     'edge-click',
     'terminal-click',
-    'node-right-click',
+    'bus-right-click',
     'edge-right-click',
     'stage-click',
     'selection-changed',
@@ -141,9 +141,9 @@ export default {
     return {
       loading: true,
       error: null,
-      layoutNodes: [],
+      layoutBuses: [],
       layoutEdges: [],
-      activeTerminals: {},
+      activeTerminals: [],
       stageConfig: {
         width: this.width,
         height: this.height,
@@ -157,7 +157,7 @@ export default {
         stroke: '#9333EA',
         strokeWidth: 3
       },
-      nodeStyle: {
+      busStyle: {
         stroke: '#000',
         strokeWidth: 1
       },
@@ -179,8 +179,8 @@ export default {
     }
   },
   computed: {
-    visibleNodes() {
-      return this.layoutNodes.filter(node => !node.hidden)
+    visibleBuses() {
+      return this.layoutBuses.filter(bus => !bus.hidden)
     },
     visibleEdges() {
       return this.layoutEdges.filter(edge => !edge.hidden)
@@ -193,7 +193,7 @@ export default {
     height(newVal) {
       this.stageConfig.height = newVal
     },
-    netlistData: {
+    networkData: {
       handler() {
         this.computeLayout()
       },
@@ -228,40 +228,40 @@ export default {
           'elk.edgeLabels.placement': 'TAIL',
           'elk.edgeRouting': 'ORTHOGONAL',
         },
-        children: this.netlistData.nodes.map(node => ({
-          id: String(node.id),
+        children: this.networkData.buses.map(bus => ({
+          id: String(bus.id),
           width: 5,
           height: 100,
           layoutOptions: {
             'elk.nodeLabels.placement': 'OUTSIDE, H_LEFT, V_BOTTOM',
           },
-          labels: [{ text: node.name, width: 50, height: 10 }]
+          labels: [{ text: bus.name, width: 50, height: 10 }]
         })),
-        edges: this.netlistData.branches.map(branch => ({
+        edges: this.networkData.branches.map(branch => ({
           id: String(branch.id),
           layoutOptions: {
             'elk.edgeLabels.placement': 'TAIL',
           },
-          sources: [String(branch.node1_id)],
-          targets: [String(branch.node2_id)],
+          sources: [String(branch.bus1_id)],
+          targets: [String(branch.bus2_id)],
           labels: [{ text: branch.name, width: 50, height: 10 }]
         }))
       }
 
       const layout = await elk.layout(graph)
 
-      this.layoutNodes = layout.children.map(node => {
-        const originalNode = this.netlistData.nodes.find(n => n.id === parseInt(node.id))
-        const labelX = node.x + node.labels[0].x
-        const labelY = node.y + node.labels[0].y
+      this.layoutBuses = layout.children.map(layoutBus => {
+        const originalBus = this.networkData.buses.find(b => b.id === parseInt(layoutBus.id))
+        const labelX = layoutBus.x + layoutBus.labels[0].x
+        const labelY = layoutBus.y + layoutBus.labels[0].y
 
         return {
-          id: node.id,
-          name: originalNode.name,
-          x: node.x,
-          y: node.y,
-          width: node.width,
-          height: node.height,
+          id: layoutBus.id,
+          name: originalBus.name,
+          x: layoutBus.x,
+          y: layoutBus.y,
+          width: layoutBus.width,
+          height: layoutBus.height,
           labelX,
           labelY,
           selected: false,
@@ -270,7 +270,7 @@ export default {
       })
 
       this.layoutEdges = layout.edges.map(edge => {
-        const originalBranch = this.netlistData.branches.find(b => b.id === parseInt(edge.id))
+        const originalBranch = this.networkData.branches.find(b => b.id === parseInt(edge.id))
         const sections = edge.sections || []
         const points = []
 
@@ -305,19 +305,19 @@ export default {
         }
       })
     },
-    getNodeConfig(node) {
+    getBusConfig(bus) {
       const baseConfig = {
-        x: node.x,
-        y: node.y,
-        width: node.width,
-        height: node.height,
+        x: bus.x,
+        y: bus.y,
+        width: bus.width,
+        height: bus.height,
         fill: '#000'
       }
 
-      if (node.selected) {
+      if (bus.selected) {
         return { ...baseConfig, ...this.selectionStyle }
       }
-      return { ...baseConfig, ...this.nodeStyle }
+      return { ...baseConfig, ...this.busStyle }
     },
     getEdgeConfig(edge) {
       const baseConfig = {
@@ -338,7 +338,9 @@ export default {
 
       if (points.length < 4) return caps
 
-      const terminals = this.activeTerminals[edge.id] || {}
+      const branch = this.getBranchById(edge.id)
+      if (!branch) return caps
+
       const terminalLength = 10
       const terminalStrokeWidth = 7
       const orangeColor = this.terminalStyle.normalColor
@@ -355,13 +357,22 @@ export default {
         }
       }
 
+      // Check if start terminal is selected (branch + bus1)
+      const startSelected = this.activeTerminals.some(
+        t => t.branch === parseInt(edge.id) && t.bus === branch.bus1_id
+      )
+
+      // Check if end terminal is selected (branch + bus2)
+      const endSelected = this.activeTerminals.some(
+        t => t.branch === parseInt(edge.id) && t.bus === branch.bus2_id
+      )
+
       // Start terminal cap
       const startX = points[0]
       const startY = points[1]
       const nextX = points[2]
       const nextY = points[3]
       const startEndPoint = getPointAtDistance(startX, startY, nextX, nextY, terminalLength)
-      const startSelected = terminals.start || false
 
       caps.push({
         config: {
@@ -372,7 +383,8 @@ export default {
           lineCap: 'round',
           hitStrokeWidth: 20
         },
-        terminalEnd: 'start'
+        terminalEnd: 'start',
+        busId: branch.bus1_id
       })
 
       // End terminal cap
@@ -382,7 +394,6 @@ export default {
       const prevX = points[len - 4]
       const prevY = points[len - 3]
       const endStartPoint = getPointAtDistance(endX, endY, prevX, prevY, terminalLength)
-      const endSelected = terminals.end || false
 
       caps.push({
         config: {
@@ -393,43 +404,38 @@ export default {
           lineCap: 'round',
           hitStrokeWidth: 20
         },
-        terminalEnd: 'end'
+        terminalEnd: 'end',
+        busId: branch.bus2_id
       })
 
       return caps
     },
-    handleNodeClick(node, e) {
+    handleBusClick(bus, e) {
       const shiftKey = e?.evt?.shiftKey || false
 
       if (!shiftKey) {
-        this.layoutNodes.forEach(n => {
-          if (n !== node) n.selected = false
+        this.layoutBuses.forEach(b => {
+          if (b !== bus) b.selected = false
         })
         this.layoutEdges.forEach(edge => edge.selected = false)
-        Object.keys(this.activeTerminals).forEach(edgeId => {
-          this.activeTerminals[edgeId].start = false
-          this.activeTerminals[edgeId].end = false
-        })
+        this.activeTerminals = []
       }
 
-      node.selected = !node.selected
+      bus.selected = !bus.selected
 
-      console.log('Node clicked:', node)
-      this.$emit('node-click', node)
+      console.log('Bus clicked:', bus)
+      this.$emit('bus-click', bus)
       this.emitSelectionChanged()
     },
     handleEdgeClick(edge, e) {
       const shiftKey = e?.evt?.shiftKey || false
 
       if (!shiftKey) {
-        this.layoutNodes.forEach(node => node.selected = false)
+        this.layoutBuses.forEach(bus => bus.selected = false)
         this.layoutEdges.forEach(e => {
           if (e !== edge) e.selected = false
         })
-        Object.keys(this.activeTerminals).forEach(edgeId => {
-          this.activeTerminals[edgeId].start = false
-          this.activeTerminals[edgeId].end = false
-        })
+        this.activeTerminals = []
       }
 
       edge.selected = !edge.selected
@@ -443,32 +449,38 @@ export default {
 
       console.log('Terminal cap clicked:', cap.terminalEnd, 'of edge', edge.name)
 
+      const branchId = parseInt(edge.id)
+      const busId = cap.busId
+      const terminalIndex = this.activeTerminals.findIndex(
+        t => t.branch === branchId && t.bus === busId
+      )
+      const wasSelected = terminalIndex !== -1
+
       if (!shiftKey) {
-        this.layoutNodes.forEach(node => node.selected = false)
+        this.layoutBuses.forEach(bus => bus.selected = false)
         this.layoutEdges.forEach(e => e.selected = false)
-        Object.keys(this.activeTerminals).forEach(edgeId => {
-          if (edgeId !== edge.id) {
-            this.activeTerminals[edgeId].start = false
-            this.activeTerminals[edgeId].end = false
-          } else {
-            const otherEnd = cap.terminalEnd === 'start' ? 'end' : 'start'
-            this.activeTerminals[edgeId][otherEnd] = false
-          }
-        })
+
+        // Clear all terminals except the one being clicked if it was selected
+        if (wasSelected) {
+          this.activeTerminals = [{ branch: branchId, bus: busId }]
+        } else {
+          this.activeTerminals = []
+        }
       }
 
-      if (!this.activeTerminals[edge.id]) {
-        this.activeTerminals[edge.id] = { start: false, end: false }
+      // Toggle the terminal
+      if (wasSelected) {
+        this.activeTerminals.splice(terminalIndex, 1)
+      } else {
+        this.activeTerminals.push({ branch: branchId, bus: busId })
       }
-
-      const wasSelected = this.activeTerminals[edge.id][cap.terminalEnd]
-      this.activeTerminals[edge.id][cap.terminalEnd] = !wasSelected
 
       console.log(`Terminal ${cap.terminalEnd} ${wasSelected ? 'deselected' : 'selected'}`)
 
       this.$emit('terminal-click', {
         edge,
         terminalEnd: cap.terminalEnd,
+        busId: busId,
         selected: !wasSelected
       })
       this.emitSelectionChanged()
@@ -477,13 +489,9 @@ export default {
       const clickedOnEmpty = e.target === e.target.getStage() || e.target.getType() === 'Layer'
 
       if (clickedOnEmpty) {
-        this.layoutNodes.forEach(node => node.selected = false)
+        this.layoutBuses.forEach(bus => bus.selected = false)
         this.layoutEdges.forEach(edge => edge.selected = false)
-
-        Object.keys(this.activeTerminals).forEach(edgeId => {
-          this.activeTerminals[edgeId].start = false
-          this.activeTerminals[edgeId].end = false
-        })
+        this.activeTerminals = []
 
         console.log('Canvas background clicked - deselecting all')
         this.$emit('stage-click')
@@ -494,31 +502,31 @@ export default {
       e.evt.preventDefault()
       console.log('Right-click on canvas background - default menu prevented')
     },
-    handleNodeRightClick(node, e) {
+    handleBusRightClick(bus, e) {
       e.evt.preventDefault()
 
-      this.layoutNodes.forEach(n => n.selected = false)
+      this.layoutBuses.forEach(b => b.selected = false)
       this.layoutEdges.forEach(edge => edge.selected = false)
 
-      node.selected = true
+      bus.selected = true
 
       this.contextMenu.show = false
       this.contextMenu.x = e.evt.clientX
       this.contextMenu.y = e.evt.clientY
-      this.contextMenu.objectType = 'Node'
-      this.contextMenu.targetObject = node
+      this.contextMenu.objectType = 'Bus'
+      this.contextMenu.targetObject = bus
 
       this.$nextTick(() => {
         this.contextMenu.show = true
       })
 
-      console.log('Node right-clicked:', node.name, 'at', e.evt.clientX, e.evt.clientY)
-      this.$emit('node-right-click', { node, x: e.evt.clientX, y: e.evt.clientY })
+      console.log('Bus right-clicked:', bus.name, 'at', e.evt.clientX, e.evt.clientY)
+      this.$emit('bus-right-click', { bus, x: e.evt.clientX, y: e.evt.clientY })
     },
     handleEdgeRightClick(edge, e) {
       e.evt.preventDefault()
 
-      this.layoutNodes.forEach(n => n.selected = false)
+      this.layoutBuses.forEach(b => b.selected = false)
       this.layoutEdges.forEach(e => e.selected = false)
 
       edge.selected = true
@@ -564,9 +572,9 @@ export default {
     handleHide() {
       const target = this.contextMenu.targetObject
 
-      if (this.contextMenu.objectType === 'Node') {
+      if (this.contextMenu.objectType === 'Bus') {
         target.hidden = true
-        console.log('Hiding node:', target.name)
+        console.log('Hiding bus:', target.name)
       } else if (this.contextMenu.objectType === 'Branch') {
         target.hidden = true
         console.log('Hiding branch:', target.name)
@@ -624,18 +632,18 @@ export default {
       this.lastMousePos = null
     },
     getBranchById(id) {
-      return this.netlistData.branches.find(b => b.id === parseInt(id))
+      return this.networkData.branches.find(b => b.id === parseInt(id))
     },
-    getNodeById(id) {
-      return this.netlistData.nodes.find(n => n.id === id)
+    getBusById(id) {
+      return this.networkData.buses.find(b => b.id === parseInt(id))
     },
     emitSelectionChanged() {
-      const selectedNodes = this.layoutNodes.filter(n => n.selected)
+      const selectedBuses = this.layoutBuses.filter(b => b.selected)
       const selectedEdges = this.layoutEdges.filter(e => e.selected)
       const selectedTerminals = this.activeTerminals
 
       this.$emit('selection-changed', {
-        nodes: selectedNodes,
+        buses: selectedBuses,
         edges: selectedEdges,
         terminals: selectedTerminals
       })

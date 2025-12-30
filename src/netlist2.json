@@ -1,0 +1,52 @@
+{
+    "buses":  [
+        {
+            "id": 1,
+            "name": "Sol",
+            "bus_num": "101",
+            "kv": "138"
+        },
+        {
+            "id": 2,
+            "name": "Luna",
+            "bus_num": "102",
+            "kv": "138"
+        },
+        {
+            "id": 3,
+            "name": "Earth",
+            "bus_num": "103",
+            "kv": "138"
+        }
+    ],
+    "branches": [
+        {
+            "id": 1,
+            "name": "Sol - Luna #1",
+            "bus1_id": 1,
+            "bus2_id": 2,
+            "ckt": "1"
+        },
+        {
+            "id": 2,
+            "name": "Sol - Luna #2",
+            "bus1_id": 1,
+            "bus2_id": 2,
+            "ckt": "2"
+        },
+        {
+            "id": 3,
+            "name": "Sol - Earth #1",
+            "bus1_id": 1,
+            "bus2_id": 3,
+            "ckt": "1"
+        },
+        {
+            "id": 4,
+            "name": "Luna - Earth #1",
+            "bus1_id": 2,
+            "bus2_id": 3,
+            "ckt": "1"
+        }
+    ]
+}
