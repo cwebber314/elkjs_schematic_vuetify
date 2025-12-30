@@ -49,7 +49,7 @@
               y: edge.labelY,
               text: edge.name,
               fontSize: 12,
-              fill: '#333',
+              fill: textColor,
               align: 'center'
             }"
           />
@@ -70,7 +70,7 @@
                 text: bus.name,
                 fontSize: 14,
                 fontStyle: 'bold',
-                fill: '#000'
+                fill: textColor
               }"
             />
           </v-group>
@@ -108,6 +108,7 @@
 
 <script>
 import ELK from 'elkjs/lib/elk.bundled.js'
+import colors from 'vuetify/util/colors'
 
 export default {
   name: 'SchematicEditor2',
@@ -153,22 +154,6 @@ export default {
       },
       isDragging: false,
       lastMousePos: null,
-      selectionStyle: {
-        stroke: '#9333EA',
-        strokeWidth: 3
-      },
-      busStyle: {
-        stroke: '#000',
-        strokeWidth: 1
-      },
-      edgeStyle: {
-        stroke: '#2196F3',
-        strokeWidth: 2
-      },
-      terminalStyle: {
-        normalColor: '#2196F3',
-        selectedColor: '#9333EA'
-      },
       contextMenu: {
         show: false,
         x: 0,
@@ -184,6 +169,43 @@ export default {
     },
     visibleEdges() {
       return this.layoutEdges.filter(edge => !edge.hidden)
+    },
+    themeColors() {
+      return this.$vuetify.theme.current.colors
+    },
+    selectionStyle() {
+      return {
+        // stroke: this.themeColors.secondary,
+        stroke: colors.purple.base,
+        fill: colors.purple.base,
+        strokeWidth: 3
+      }
+    },
+    busStyle() {
+      return {
+        // stroke: this.themeColors['on-surface'],
+        stroke: colors.blue.base,
+        fill: colors.blue.base,
+        strokeWidth: 1
+      }
+    },
+    edgeStyle() {
+      return {
+        // stroke: this.themeColors.primary,
+        stroke: colors.blue.base,
+        strokeWidth: 2
+      }
+    },
+    terminalStyle() {
+      return {
+        // normalColor: this.themeColors.primary,
+        // selectedColor: this.themeColors.secondary
+        normalColor: colors.blue.base,
+        selectedColor: colors.purple.base
+      }
+    },
+    textColor() {
+      return this.themeColors['on-surface']
     }
   },
   watch: {
@@ -311,7 +333,10 @@ export default {
         y: bus.y,
         width: bus.width,
         height: bus.height,
-        fill: '#000'
+        fill: colors.blue.base,
+        stroke: colors.blue.base,
+        strokeWidth: 2
+        // fill: this.themeColors['on-surface']
       }
 
       if (bus.selected) {
