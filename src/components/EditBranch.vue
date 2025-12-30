@@ -109,7 +109,7 @@
 
 <script>
 export default {
-  name: 'EditEdge',
+  name: 'EditBranch',
   props: {
     modelValue: {
       type: Boolean,

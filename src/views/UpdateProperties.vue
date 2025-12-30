@@ -79,13 +79,13 @@
       </v-layer>
     </v-stage>
 
-    <EditNode
+    <EditBus
       v-model="showEditDialog"
       :node="selectedNode"
       @save="handleNodeSave"
     />
 
-    <EditEdge
+    <EditBranch
       v-model="showEditEdgeDialog"
       :edge="selectedEdge"
       @save="handleEdgeSave"
@@ -97,14 +97,14 @@
 <script>
 import ELK from 'elkjs/lib/elk.bundled.js'
 import netlistData from '../netlist.json'
-import EditNode from '../components/EditNode.vue'
-import EditEdge from '../components/EditEdge.vue'
+import EditBranch from '../components/EditBranch.vue'
+import EditBus from '../components/EditBus.vue'
 
 export default {
   name: 'UpdateProperties',
   components: {
-    EditNode,
-    EditEdge
+    EditBranch,
+    EditBus
   },
   data() {
     return {

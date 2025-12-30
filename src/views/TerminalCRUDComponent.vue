@@ -203,13 +203,13 @@
     </v-row>
 
     <!-- Dialogs -->
-    <EditEdge
+    <EditBranch
       v-if="currentBranch"
       v-model="showBranchDialog"
       :edge="currentBranch"
     />
 
-    <EditNode
+    <EditBus
       v-if="currentBus"
       v-model="showBusDialog"
       :node="currentBus"
@@ -255,8 +255,8 @@ import networkData from '../netlist2.json'
 import terminalEquipmentData from '../terminal_equipment.json'
 import sectionsData from '../sections.json'
 import SchematicEditor2 from '../components/SchematicEditor2.vue'
-import EditEdge from '../components/EditEdge.vue'
-import EditNode from '../components/EditNode.vue'
+import EditBranch from '../components/EditBranch.vue'
+import EditBus from '../components/EditBus.vue'
 import ViewEquipment from '../components/ViewEquipment.vue'
 import ViewSection from '../components/ViewSection.vue'
 
@@ -264,8 +264,8 @@ export default {
   name: 'TerminalCRUDComponent',
   components: {
     SchematicEditor2,
-    EditEdge,
-    EditNode,
+    EditBranch,
+    EditBus,
     ViewEquipment,
     ViewSection
   },
@@ -506,7 +506,7 @@ export default {
         }
         this.showBusDialog = true
       } else if (objectType === 'Branch') {
-        // Open EditEdge dialog
+        // Open EditBranch dialog
         const branchData = networkData.branches.find(b => b.id === parseInt(targetObject.id))
 
         this.currentBranch = {

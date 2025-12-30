@@ -35,14 +35,14 @@
     </v-toolbar>
 
     <!-- Edit Node Dialog -->
-    <EditNode
+    <EditBus
       v-model="showNodeDialog"
       :node="editingNode"
       @save="handleNodeSave"
     />
 
     <!-- Edit Edge Dialog -->
-    <EditEdge
+    <EditBranch
       v-model="showEdgeDialog"
       :edge="editingEdge"
       @save="handleEdgeSave"
@@ -106,14 +106,14 @@
 <script>
 import ELK from 'elkjs/lib/elk.bundled.js'
 import netlistData from '../netlist.json'
-import EditNode from '../components/EditNode.vue'
-import EditEdge from '../components/EditEdge.vue'
+import EditBus from '../components/EditBus.vue'
+import EditBranch from '../components/EditBranch.vue'
 
 export default {
   name: 'AddObject',
   components: {
-    EditNode,
-    EditEdge
+    EditBus,
+    EditBranch
   },
   data() {
     return {
