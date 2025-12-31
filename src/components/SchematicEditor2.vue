@@ -189,7 +189,7 @@ export default {
       stageConfig: {
         width: this.width,
         height: this.height,
-        draggable: false,
+        draggable: true,
         x: 50,
         y: 50
       },
@@ -804,13 +804,18 @@ export default {
       stage.position(newPos)
     },
     handleMouseDown(e) {
-      // Left mouse button - rectangle selection on empty canvas
-      if (e.evt.button === 0) {
+      // Shift + left mouse button - rectangle selection on empty canvas
+      if (e.evt.button === 0 && e.evt.shiftKey) {
         const clickedOnEmpty = e.target === e.target.getStage() || e.target.getType() === 'Layer'
 
         if (clickedOnEmpty) {
-          // Start rectangle selection
+          // Prevent default panning when shift is held
+          e.evt.preventDefault()
           const stage = e.target.getStage()
+
+          // Disable stage dragging temporarily for selection
+          stage.draggable(false)
+
           const pointerPos = stage.getPointerPosition()
           const scale = stage.scaleX()
 
@@ -824,15 +829,6 @@ export default {
           this.selectionRect.width = 0
           this.selectionRect.height = 0
           this.selectionRect.visible = true
-        }
-      }
-      // Middle mouse button - pan canvas
-      else if (e.evt.button === 1) {
-        e.evt.preventDefault() // Prevent default middle-click behavior
-        this.isDragging = true
-        this.lastMousePos = {
-          x: e.evt.clientX,
-          y: e.evt.clientY
         }
       }
     },
@@ -853,20 +849,9 @@ export default {
 
         this.selectionRect.width = currentX - startX
         this.selectionRect.height = currentY - startY
-      } else if (this.isDragging && this.lastMousePos) {
-        const dx = e.evt.clientX - this.lastMousePos.x
-        const dy = e.evt.clientY - this.lastMousePos.y
-
-        this.stageConfig.x += dx
-        this.stageConfig.y += dy
-
-        this.lastMousePos = {
-          x: e.evt.clientX,
-          y: e.evt.clientY
-        }
       }
     },
-    handleMouseUp() {
+    handleMouseUp(e) {
       if (this.isSelecting) {
         // Select all objects within the selection rectangle
         this.layoutBuses.forEach(bus => {
@@ -885,12 +870,13 @@ export default {
         this.selectionRect.visible = false
         this.isSelecting = false
 
+        // Re-enable stage dragging
+        const stage = e.target.getStage()
+        stage.draggable(true)
+
         // Emit selection changed event
         this.emitSelectionChanged()
       }
-
-      this.isDragging = false
-      this.lastMousePos = null
     },
     getBranchById(id) {
       return this.networkData.branches.find(b => b.id === parseInt(id))

@@ -78,6 +78,14 @@
       </v-row>
     </div>
 
+    <!-- Resize Handle -->
+    <div
+      class="resize-handle"
+      @mousedown="startResize"
+      :class="{ 'resizing': isResizing }">
+      <div class="resize-handle-line"></div>
+    </div>
+
     <!-- Data Browser Section -->
     <v-row v-if="!loading && !error" class="data-browser-section">
       <v-col>
@@ -354,6 +362,10 @@ export default {
       expandedSectionGroups: [],
       editorWidth: window.innerWidth - 48,
       editorHeight: window.innerHeight * 0.5 - 80,
+      // Resize state
+      isResizing: false,
+      resizeStartY: 0,
+      resizeStartHeight: 0,
       // Dialog states
       showBranchDialog: false,
       addBusDialog: false,
@@ -527,11 +539,30 @@ export default {
     },
     region(newVal) {
       console.log('Region changed to:', newVal)
+      // Save selected region to localStorage
+      localStorage.setItem('selectedRegion', newVal)
     }
   },
   async mounted() {
     window.addEventListener('resize', this.handleResize)
     window.addEventListener('keydown', this.handleKeyPress)
+
+    // Restore saved region from localStorage
+    const savedRegion = localStorage.getItem('selectedRegion')
+    if (savedRegion && this.regions.includes(savedRegion)) {
+      this.region = savedRegion
+      console.log('Restored region from localStorage:', savedRegion)
+    }
+
+    // Restore saved schematic height from localStorage
+    const savedHeight = localStorage.getItem('schematicHeight')
+    if (savedHeight) {
+      const height = parseInt(savedHeight, 10)
+      if (!isNaN(height) && height >= 200 && height <= window.innerHeight - 200) {
+        this.editorHeight = height
+        console.log('Restored schematic height from localStorage:', height)
+      }
+    }
 
     // Load all sections data on component mount
     try {
@@ -625,6 +656,43 @@ export default {
           this.selectedEdges = []
         }
       }
+    },
+    startResize(event) {
+      this.isResizing = true
+      this.resizeStartY = event.clientY
+      this.resizeStartHeight = this.editorHeight
+
+      // Add global listeners for dragging
+      window.addEventListener('mousemove', this.doResize)
+      window.addEventListener('mouseup', this.stopResize)
+
+      // Prevent text selection during drag
+      event.preventDefault()
+    },
+    doResize(event) {
+      if (!this.isResizing) return
+
+      const deltaY = event.clientY - this.resizeStartY
+      const newHeight = this.resizeStartHeight + deltaY
+
+      // Set minimum and maximum heights
+      const minHeight = 200
+      const maxHeight = window.innerHeight - 400
+
+      this.editorHeight = Math.max(minHeight, Math.min(maxHeight, newHeight))
+    },
+    stopResize() {
+      if (!this.isResizing) return
+
+      this.isResizing = false
+
+      // Remove global listeners
+      window.removeEventListener('mousemove', this.doResize)
+      window.removeEventListener('mouseup', this.stopResize)
+
+      // Save to localStorage
+      localStorage.setItem('schematicHeight', this.editorHeight.toString())
+      console.log('Saved schematic height to localStorage:', this.editorHeight)
     },
     handlePropertiesClick({ objectType, targetObject }) {
       console.log('Properties clicked from context menu:', objectType, targetObject)
@@ -880,6 +948,37 @@ export default {
   flex: 1;
   overflow: auto;
   min-height: 300px;
+}
+
+.resize-handle {
+  height: 8px;
+  cursor: ns-resize;
+  background-color: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 10;
+  transition: background-color 0.2s;
+}
+
+.resize-handle:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.resize-handle.resizing {
+  background-color: rgba(0, 123, 255, 0.2);
+}
+
+.resize-handle-line {
+  width: 40px;
+  height: 2px;
+  background-color: rgba(0, 0, 0, 0.3);
+  border-radius: 2px;
+}
+
+.resize-handle:hover .resize-handle-line {
+  background-color: rgba(0, 123, 255, 0.6);
 }
 
 :deep(.summary-row) {
