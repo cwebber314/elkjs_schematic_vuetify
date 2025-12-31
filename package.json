@@ -1,6 +1,7 @@
 {
   "name": "oneline-schematic-viewer",
   "version": "1.0.0",
+  "type": "module",
   "description": "Electrical oneline schematic viewer using Vue, Konva, and ELK",
   "scripts": {
     "dev": "vite",

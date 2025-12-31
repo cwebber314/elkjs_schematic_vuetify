@@ -91,15 +91,32 @@
       <v-card>
         <v-list dense>
           <v-list-subheader>{{ contextMenu.objectType }}</v-list-subheader>
-          <v-list-item @click="handleProperties">
-            <v-list-item-title>Properties</v-list-item-title>
-          </v-list-item>
-          <v-list-item v-if="contextMenu.objectType === 'Bus'" @click="handleGrow">
-            <v-list-item-title>Grow</v-list-item-title>
-          </v-list-item>
-          <v-list-item @click="handleHide">
-            <v-list-item-title>Hide</v-list-item-title>
-          </v-list-item>
+
+          <!-- Background context menu -->
+          <template v-if="contextMenu.objectType === 'Background'">
+            <!-- Add/Show Bus = Show existing bus on the canvas -->
+            <v-list-item @click="handleShowBus">
+              <v-list-item-title>Show Bus</v-list-item-title>
+            </v-list-item>
+
+            <!-- Create Bus = Create a new bus -->
+            <v-list-item v-if="false" @click="handleCreateBus">
+              <v-list-item-title>Create Bus</v-list-item-title>
+            </v-list-item>
+          </template>
+
+          <!-- Bus/Branch context menu -->
+          <template v-else>
+            <v-list-item @click="handleProperties">
+              <v-list-item-title>Properties</v-list-item-title>
+            </v-list-item>
+            <v-list-item v-if="contextMenu.objectType === 'Bus'" @click="handleGrow">
+              <v-list-item-title>Grow</v-list-item-title>
+            </v-list-item>
+            <v-list-item @click="handleHide">
+              <v-list-item-title>Hide</v-list-item-title>
+            </v-list-item>
+          </template>
         </v-list>
       </v-card>
     </div>
@@ -136,7 +153,8 @@ export default {
     'selection-changed',
     'resize',
     'properties-click',
-    'grow-click'
+    'grow-click',
+    'show-bus-click'
   ],
   data() {
     return {
@@ -175,7 +193,6 @@ export default {
     },
     selectionStyle() {
       return {
-        // stroke: this.themeColors.secondary,
         stroke: colors.purple.base,
         fill: colors.purple.base,
         strokeWidth: 3
@@ -183,7 +200,6 @@ export default {
     },
     busStyle() {
       return {
-        // stroke: this.themeColors['on-surface'],
         stroke: colors.blue.base,
         fill: colors.blue.base,
         strokeWidth: 1
@@ -191,15 +207,12 @@ export default {
     },
     edgeStyle() {
       return {
-        // stroke: this.themeColors.primary,
         stroke: colors.blue.base,
         strokeWidth: 2
       }
     },
     terminalStyle() {
       return {
-        // normalColor: this.themeColors.primary,
-        // selectedColor: this.themeColors.secondary
         normalColor: colors.blue.base,
         selectedColor: colors.purple.base
       }
@@ -336,7 +349,6 @@ export default {
         fill: colors.blue.base,
         stroke: colors.blue.base,
         strokeWidth: 2
-        // fill: this.themeColors['on-surface']
       }
 
       if (bus.selected) {
@@ -525,10 +537,23 @@ export default {
     },
     handleStageRightClick(e) {
       e.evt.preventDefault()
-      console.log('Right-click on canvas background - default menu prevented')
+
+      this.contextMenu.show = false
+      this.contextMenu.x = e.evt.clientX
+      this.contextMenu.y = e.evt.clientY
+      this.contextMenu.objectType = 'Background'
+      this.contextMenu.targetObject = null
+
+      this.$nextTick(() => {
+        this.contextMenu.show = true
+      })
+
+      console.log('Background right-clicked at', e.evt.clientX, e.evt.clientY)
     },
     handleBusRightClick(bus, e) {
       e.evt.preventDefault()
+      e.evt.stopPropagation() // Prevent event from bubbling to stage
+      e.cancelBubble = true // For Konva compatibility
 
       this.layoutBuses.forEach(b => b.selected = false)
       this.layoutEdges.forEach(edge => edge.selected = false)
@@ -550,6 +575,8 @@ export default {
     },
     handleEdgeRightClick(edge, e) {
       e.evt.preventDefault()
+      e.evt.stopPropagation() // Prevent event from bubbling to stage
+      e.cancelBubble = true // For Konva compatibility
 
       this.layoutBuses.forEach(b => b.selected = false)
       this.layoutEdges.forEach(e => e.selected = false)
@@ -592,6 +619,18 @@ export default {
         targetObject: this.contextMenu.targetObject
       })
 
+      this.contextMenu.show = false
+    },
+    handleShowBus() {
+      console.log('Show Bus clicked from context menu')
+      // Emit event to parent component to handle add bus action
+      this.$emit('show-bus-click')
+      this.contextMenu.show = false
+    },
+    handleCreateBus() {
+      console.log('Create Bus clicked from context menu')
+      // Emit event to parent component to handle add bus action
+      this.$emit('create-bus-click')
       this.contextMenu.show = false
     },
     handleHide() {

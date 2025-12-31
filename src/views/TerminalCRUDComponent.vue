@@ -1,21 +1,81 @@
 <template>
   <v-container fluid class="page-container">
     <!-- Schematic Editor Section -->
-    <v-row class="schematic-section">
-      <v-col>
-        <SchematicEditor2
-          :networkData="networkData"
-          :width="editorWidth"
-          :height="editorHeight"
-          @bus-click="handleBusClick"
-          @edge-click="handleEdgeClick"
-          @terminal-click="handleTerminalClick"
-          @selection-changed="handleSelectionChanged"
-          @properties-click="handlePropertiesClick"
-          @grow-click="handleGrowClick"
-        />
-      </v-col>
-    </v-row>
+    <!-- Toolbar with Add Node and Add Branch buttons -->
+
+    <div class="schematic-section">
+      <v-row no-gutters class="schematic-row">
+        <v-col cols="auto">
+          <div id="schematic-toolbar" class="vertical-toolbar">
+            <v-menu location="right">
+              <template v-slot:activator="{ props }">
+                <v-btn
+                  v-bind="props"
+                  size="large"
+                  title="Select Region"
+                  variant="flat"
+                  color="surface"
+                  icon="mdi-map">
+                </v-btn>
+              </template>
+              <v-list density="compact" min-width="150">
+                <v-list-subheader>Select Region</v-list-subheader>
+                <v-list-item
+                  v-for="regionOption in regions"
+                  :key="regionOption"
+                  :value="regionOption"
+                  :active="region === regionOption"
+                  @click="region = regionOption">
+                  <v-list-item-title>{{ regionOption }}</v-list-item-title>
+                  <template v-slot:append v-if="region === regionOption">
+                    <v-icon>mdi-check</v-icon>
+                  </template>
+                </v-list-item>
+              </v-list>
+            </v-menu>
+            <v-btn
+              icon="mdi-vector-point-select"
+              title="Show Bus"
+              size="large"
+              variant="flat"
+              color="surface"
+              @click="showSelectBusDialog = true">
+            </v-btn>
+            <v-btn
+              v-if="false"
+              icon="mdi-vector-point-plus"
+              title="Add Bus"
+              size="large"
+              variant="flat"
+              color="surface"
+              >
+            </v-btn>
+            <v-btn
+              v-if="false"
+              icon="mdi-vector-polyline-plus"
+              title="Add Branch"
+              size="large"
+              variant="flat"
+              color="surface">
+            </v-btn>
+          </div>
+        </v-col>
+        <v-col>
+          <SchematicEditor2
+            :networkData="networkData"
+            :width="editorWidth"
+            :height="editorHeight"
+            @bus-click="handleBusClick"
+            @edge-click="handleEdgeClick"
+            @terminal-click="handleTerminalClick"
+            @selection-changed="handleSelectionChanged"
+            @properties-click="handlePropertiesClick"
+            @grow-click="handleGrowClick"
+            @show-bus-click="handleShowBusClick"
+          />
+        </v-col>
+      </v-row>
+    </div>
 
     <!-- Data Browser Section -->
     <v-row v-if="!loading && !error" class="data-browser-section">
@@ -23,7 +83,7 @@
         <v-card>
           <v-tabs v-model="activeTab" bg-color="primary">
             <v-tab value="branches">Branches</v-tab>
-            <v-tab value="busses">Busses</v-tab>
+            <v-tab value="buses">Buses</v-tab>
             <v-tab value="sections">Sections</v-tab>
             <v-tab value="terminal-equipment">Terminal Equipment</v-tab>
           </v-tabs>
@@ -60,17 +120,17 @@
                 </v-data-table>
               </v-window-item>
 
-              <!-- Busses Tab -->
-              <v-window-item value="busses">
+              <!-- Buses Tab -->
+              <v-window-item value="buses">
                 <v-data-table
-                  :headers="bussesHeaders"
-                  :items="selectedBusses"
+                  :headers="busesHeaders"
+                  :items="selectedBuses"
                   :items-per-page="5"
                   class="elevation-1"
                   density="compact">
                   <template v-slot:top>
                     <v-toolbar flat>
-                      <v-toolbar-title>Selected Busses ({{ selectedBusses.length }})</v-toolbar-title>
+                      <v-toolbar-title>Selected Buses ({{ selectedBuses.length }})</v-toolbar-title>
                     </v-toolbar>
                   </template>
                   <template v-slot:item.actions="{ item }">
@@ -84,7 +144,7 @@
                   </template>
                   <template v-slot:no-data>
                     <v-alert type="info" class="ma-2">
-                      No busses selected. Click on a bus (node rectangle) in the schematic to view its details.
+                      No buses selected. Click on a bus (node rectangle) in the schematic to view its details.
                     </v-alert>
                   </template>
                 </v-data-table>
@@ -215,6 +275,12 @@
       :node="currentBus"
     />
 
+    <SelectBus
+      v-model="showSelectBusDialog"
+      :region="region"
+      @select="handleSelectBus"
+    />
+
     <ViewEquipment
       v-if="currentEquipment"
       v-model="showEquipmentDialog"
@@ -251,12 +317,13 @@
 
 
 <script>
-import networkData from '../netlist2.json'
+import { fetchNetworkByBusId } from '../services/networkApi.js'
+import { fetchAllSections } from '../services/sectionsApi.js'
 import terminalEquipmentData from '../terminal_equipment.json'
-import sectionsData from '../sections.json'
 import SchematicEditor2 from '../components/SchematicEditor2.vue'
 import EditBranch from '../components/EditBranch.vue'
 import EditBus from '../components/EditBus.vue'
+import SelectBus from '../components/SelectBus.vue'
 import ViewEquipment from '../components/ViewEquipment.vue'
 import ViewSection from '../components/ViewSection.vue'
 
@@ -266,13 +333,17 @@ export default {
     SchematicEditor2,
     EditBranch,
     EditBus,
+    SelectBus,
     ViewEquipment,
     ViewSection
   },
   data() {
     return {
-      networkData: networkData,
+      region: 'SPP', // Either SPP, ERCOT, PJM
+      regions: ['SPP', 'ERCOT', 'PJM'],
+      networkData: { buses: [], branches: [] }, // Empty until bus is selected
       terminalEquipmentData: [...terminalEquipmentData],
+      sectionsData: [], // Will be loaded from API
       loading: false,
       error: null,
       selectedBuses: [],
@@ -285,6 +356,7 @@ export default {
       // Dialog states
       showBranchDialog: false,
       showBusDialog: false,
+      showSelectBusDialog: false,
       showEquipmentDialog: false,
       showSectionDialog: false,
       showDeleteDialog: false,
@@ -303,7 +375,7 @@ export default {
         { title: 'Bus 1 ID', key: 'bus1_id', sortable: true },
         { title: 'Bus 2 ID', key: 'bus2_id', sortable: true }
       ],
-      bussesHeaders: [
+      busesHeaders: [
         { title: 'Actions', key: 'actions', sortable: false, width: '80px' },
         { title: 'ID', key: 'id', sortable: true },
         { title: 'Name', key: 'name', sortable: true },
@@ -334,11 +406,12 @@ export default {
   },
   computed: {
     selectedBranches() {
+      console.log("selectedBranches()")
       // Get selected edges and combine with original branch data
       return this.selectedEdges.map(edge => {
-        const branchData = networkData.branches.find(b => b.id === parseInt(edge.id))
-        const bus1 = networkData.buses.find(b => b.id === branchData.bus1_id)
-        const bus2 = networkData.buses.find(b => b.id === branchData.bus2_id)
+        const branchData = this.networkData.branches.find(b => b.id === parseInt(edge.id))
+        const bus1 = this.networkData.buses.find(b => b.id === branchData.bus1_id)
+        const bus2 = this.networkData.buses.find(b => b.id === branchData.bus2_id)
 
         return {
           id: branchData.id,
@@ -350,10 +423,10 @@ export default {
         }
       })
     },
-    selectedBusses() {
+    selectedBuses() {
       // Get selected buses and combine with original bus data
       return this.selectedBuses.map(bus => {
-        const busData = networkData.buses.find(b => b.id === parseInt(bus.id))
+        const busData = this.networkData.buses.find(b => b.id === parseInt(bus.id))
 
         return {
           id: busData.id,
@@ -372,9 +445,9 @@ export default {
 
       // Find all sections for selected branches
       selectedBranchIds.forEach((branchId) => {
-        const branchData = networkData.branches.find(b => b.id === branchId)
+        const branchData = this.networkData.branches.find(b => b.id === branchId)
         const branchName = branchData ? branchData.name : `Branch ${branchId}`
-        const branchSections = sectionsData.filter(section => section.branch_id === branchId)
+        const branchSections = this.sectionsData.filter(section => section.branch_id === branchId)
 
         // Add branch name to each section for grouping display
         const sectionsWithBranchName = branchSections.map(section => ({
@@ -450,10 +523,22 @@ export default {
         }
       },
       immediate: true
+    },
+    region(newVal) {
+      console.log('Region changed to:', newVal)
     }
   },
-  mounted() {
+  async mounted() {
     window.addEventListener('resize', this.handleResize)
+
+    // Load all sections data on component mount
+    try {
+      this.sectionsData = await fetchAllSections()
+      console.log('Loaded sections data:', this.sectionsData.length)
+    } catch (err) {
+      console.error('Error loading sections data:', err)
+      this.error = 'Failed to load sections data'
+    }
   },
   beforeUnmount() {
     window.removeEventListener('resize', this.handleResize)
@@ -469,19 +554,19 @@ export default {
       this.selectedTerminals = terminals
     },
     handleBusClick(bus) {
-      if (bus.selected) {
-        this.activeTab = 'busses'
-      }
+      // if (bus.selected) {
+      //   this.activeTab = 'buses'
+      // }
     },
     handleEdgeClick(edge) {
-      if (edge.selected) {
-        this.activeTab = 'branches'
-      }
+      // if (edge.selected) {
+      //   this.activeTab = 'branches'
+      // }
     },
     handleTerminalClick({ edge, terminalEnd, selected }) {
-      if (selected) {
-        this.activeTab = 'terminal-equipment'
-      }
+      // if (selected) {
+      //   this.activeTab = 'terminal-equipment'
+      // }
     },
     handleResize() {
       this.editorWidth = window.innerWidth - 48
@@ -492,7 +577,7 @@ export default {
 
       if (objectType === 'Bus') {
         // Open EditNode dialog
-        const busData = networkData.buses.find(b => b.id === parseInt(targetObject.id))
+        const busData = this.networkData.buses.find(b => b.id === parseInt(targetObject.id))
 
         this.currentBus = {
           id: targetObject.id,
@@ -507,7 +592,7 @@ export default {
         this.showBusDialog = true
       } else if (objectType === 'Branch') {
         // Open EditBranch dialog
-        const branchData = networkData.branches.find(b => b.id === parseInt(targetObject.id))
+        const branchData = this.networkData.branches.find(b => b.id === parseInt(targetObject.id))
 
         this.currentBranch = {
           id: targetObject.id,
@@ -522,8 +607,52 @@ export default {
         this.showBranchDialog = true
       }
     },
-    handleGrowClick({ objectType, targetObject }) {
+    async handleGrowClick({ objectType, targetObject }) {
       console.log('Grow clicked from context menu:', objectType, targetObject)
+
+      if (objectType === 'Bus' && targetObject) {
+        try {
+          this.loading = true
+
+          // Fetch network data for the selected bus
+          const network = await fetchNetworkByBusId(targetObject.id)
+
+          if (network) {
+            // Merge the new network data with existing data
+            this.mergeNetworkData(network)
+
+            console.log(`Grew network from ${targetObject.name}:`, network)
+            console.log('Total buses:', this.networkData.buses.length)
+            console.log('Total branches:', this.networkData.branches.length)
+          } else {
+            console.error('No network data found for bus:', targetObject.id)
+          }
+        } catch (err) {
+          console.error('Error fetching network data for grow:', err)
+          this.error = 'Failed to grow network'
+        } finally {
+          this.loading = false
+        }
+      }
+    },
+    mergeNetworkData(newNetwork) {
+      // Helper method to merge new network data without duplicates
+
+      // Merge buses (avoid duplicates by ID)
+      const existingBusIds = new Set(this.networkData.buses.map(b => b.id))
+      const newBuses = newNetwork.buses.filter(bus => !existingBusIds.has(bus.id))
+      this.networkData.buses.push(...newBuses)
+
+      // Merge branches (avoid duplicates by ID)
+      const existingBranchIds = new Set(this.networkData.branches.map(b => b.id))
+      const newBranches = newNetwork.branches.filter(branch => !existingBranchIds.has(branch.id))
+      this.networkData.branches.push(...newBranches)
+
+      console.log(`Added ${newBuses.length} new buses and ${newBranches.length} new branches`)
+    },
+    handleShowBusClick() {
+      console.log('Show Bus clicked from schematic context menu')
+      this.showSelectBusDialog = true
     },
     editEquipment(item) {
       console.log('Edit equipment:', item)
@@ -582,6 +711,40 @@ export default {
         this.isDeleting = false
       }
     },
+    async handleSelectBus(busData) {
+      console.log('Selected bus:', busData)
+
+      try {
+        // Fetch network data for the selected bus
+        this.loading = true
+        const network = await fetchNetworkByBusId(busData.id)
+
+        if (network) {
+          // Update network data with the fetched data
+          this.networkData = network
+
+          // Mark the bus as selected
+          const busWithSelection = { ...busData, selected: true }
+
+          // Clear previous selections and add this bus
+          this.selectedBuses = [busWithSelection]
+
+          // Switch to the buses tab to show the selected bus
+          this.activeTab = 'buses'
+
+          console.log(`Loaded network for ${busData.name}:`, network)
+        } else {
+          console.error('No network data found for bus:', busData.id)
+          this.error = `No network data found for ${busData.name}`
+        }
+      } catch (err) {
+        console.error('Error fetching network data:', err)
+        this.error = 'Failed to load network data'
+      } finally {
+        this.loading = false
+        this.showSelectBusDialog = false
+      }
+    },
     viewSection(item) {
       console.log('View section:', item)
       this.currentSection = { ...item }
@@ -589,8 +752,8 @@ export default {
     },
     viewBus(item) {
       console.log('View bus:', item)
-      // We don't have layoutBus anymore, so just use the basic data
-      const busData = networkData.buses.find(b => b.id === item.id)
+      // Find the bus data from the current network data
+      const busData = this.networkData.buses.find(b => b.id === item.id)
 
       this.currentBus = {
         id: item.id,
@@ -606,8 +769,8 @@ export default {
     },
     viewBranch(item) {
       console.log('View branch:', item)
-      // We don't have layoutEdge anymore, so just use the basic data
-      const branchData = networkData.branches.find(b => b.id === item.id)
+      // Find the branch data from the current network data
+      const branchData = this.networkData.branches.find(b => b.id === item.id)
 
       this.currentBranch = {
         id: item.id,
@@ -636,6 +799,14 @@ export default {
 .schematic-section {
   flex: 0 0 50%;
   overflow: hidden;
+  display: flex;
+}
+
+.schematic-row {
+  flex: 1;
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  height: 100%;
 }
 
 .schematic-sheet {
@@ -652,5 +823,21 @@ export default {
 :deep(.summary-row) {
   background-color: rgba(0, 0, 0, 0.05);
   font-weight: bold;
+}
+
+.vertical-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px;
+  background-color: rgb(var(--v-theme-surface));
+  min-height: 100%;
+  border-right: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+}
+
+.schematic-row .v-col {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 </style>
