@@ -74,6 +74,22 @@
               }"
             />
           </v-group>
+
+          <!-- Selection rectangle -->
+          <v-rect
+            v-if="selectionRect.visible"
+            :config="{
+              x: selectionRect.x,
+              y: selectionRect.y,
+              width: selectionRect.width,
+              height: selectionRect.height,
+              fill: 'rgba(0, 123, 255, 0.1)',
+              stroke: '#007bff',
+              strokeWidth: 1,
+              dash: [5, 5],
+              listening: false
+            }"
+          />
         </v-layer>
       </v-stage>
     </v-sheet>
@@ -94,14 +110,21 @@
 
           <!-- Background context menu -->
           <template v-if="contextMenu.objectType === 'Background'">
-            <!-- Add/Show Bus = Show existing bus on the canvas -->
-            <v-list-item @click="handleShowBus">
-              <v-list-item-title>Show Bus</v-list-item-title>
+            <!-- Add Bus = Show existing bus on the canvas -->
+            <v-list-item @click="handleAddBus">
+              <v-list-item-title>Add Bus to diagram</v-list-item-title>
             </v-list-item>
 
             <!-- Create Bus = Create a new bus -->
             <v-list-item v-if="false" @click="handleCreateBus">
               <v-list-item-title>Create Bus</v-list-item-title>
+            </v-list-item>
+          </template>
+
+          <!-- Multiple Selection context menu -->
+          <template v-else-if="contextMenu.objectType === 'Multiple Selection'">
+            <v-list-item @click="handleHideSelected">
+              <v-list-item-title>Hide (h)</v-list-item-title>
             </v-list-item>
           </template>
 
@@ -111,10 +134,10 @@
               <v-list-item-title>Properties</v-list-item-title>
             </v-list-item>
             <v-list-item v-if="contextMenu.objectType === 'Bus'" @click="handleGrow">
-              <v-list-item-title>Grow</v-list-item-title>
+              <v-list-item-title>Grow (g)</v-list-item-title>
             </v-list-item>
             <v-list-item @click="handleHide">
-              <v-list-item-title>Hide</v-list-item-title>
+              <v-list-item-title>Hide (h)</v-list-item-title>
             </v-list-item>
           </template>
         </v-list>
@@ -154,7 +177,7 @@ export default {
     'resize',
     'properties-click',
     'grow-click',
-    'show-bus-click'
+    'add-bus-click'
   ],
   data() {
     return {
@@ -166,12 +189,20 @@ export default {
       stageConfig: {
         width: this.width,
         height: this.height,
-        draggable: true,
+        draggable: false,
         x: 50,
         y: 50
       },
       isDragging: false,
       lastMousePos: null,
+      isSelecting: false,
+      selectionRect: {
+        x: 0,
+        y: 0,
+        width: 0,
+        height: 0,
+        visible: false
+      },
       contextMenu: {
         show: false,
         x: 0,
@@ -258,7 +289,7 @@ export default {
           'elk.algorithm': 'layered',
           'elk.direction': 'RIGHT',
           'elk.spacing.nodeNode': '30',
-          'elk.layered.spacing.nodeNodeBetweenLayers': '100',
+          'elk.layered.spacing.nodeNodeBetweenLayers': '80',
           'elk.spacing.edgeEdge': 20,
           'elk.edgeLabels.placement': 'TAIL',
           'elk.edgeRouting': 'ORTHOGONAL',
@@ -285,10 +316,18 @@ export default {
 
       const layout = await elk.layout(graph)
 
+      // Preserve hidden state for existing buses
+      const previousBusHiddenStates = new Map(
+        this.layoutBuses.map(bus => [bus.id, bus.hidden])
+      )
+
       this.layoutBuses = layout.children.map(layoutBus => {
         const originalBus = this.networkData.buses.find(b => b.id === parseInt(layoutBus.id))
         const labelX = layoutBus.x + layoutBus.labels[0].x
         const labelY = layoutBus.y + layoutBus.labels[0].y
+
+        // Preserve hidden state if bus existed before, otherwise default to visible (false)
+        const wasHidden = previousBusHiddenStates.get(layoutBus.id) || false
 
         return {
           id: layoutBus.id,
@@ -300,9 +339,14 @@ export default {
           labelX,
           labelY,
           selected: false,
-          hidden: false
+          hidden: wasHidden
         }
       })
+
+      // Preserve hidden state for existing edges
+      const previousEdgeHiddenStates = new Map(
+        this.layoutEdges.map(edge => [edge.id, edge.hidden])
+      )
 
       this.layoutEdges = layout.edges.map(edge => {
         const originalBranch = this.networkData.branches.find(b => b.id === parseInt(edge.id))
@@ -329,6 +373,9 @@ export default {
           labelY = label.y
         }
 
+        // Preserve hidden state if edge existed before, otherwise default to visible (false)
+        const wasHidden = previousEdgeHiddenStates.get(edge.id) || false
+
         return {
           id: edge.id,
           name: originalBranch.name,
@@ -336,7 +383,7 @@ export default {
           labelX,
           labelY,
           selected: false,
-          hidden: false
+          hidden: wasHidden
         }
       })
     },
@@ -448,6 +495,9 @@ export default {
       return caps
     },
     handleBusClick(bus, e) {
+      // Only handle left-clicks, ignore right-clicks (handled by contextmenu)
+      if (e?.evt?.button !== 0) return
+
       const shiftKey = e?.evt?.shiftKey || false
 
       if (!shiftKey) {
@@ -465,12 +515,15 @@ export default {
       this.emitSelectionChanged()
     },
     handleEdgeClick(edge, e) {
+      // Only handle left-clicks, ignore right-clicks (handled by contextmenu)
+      if (e?.evt?.button !== 0) return
+
       const shiftKey = e?.evt?.shiftKey || false
 
       if (!shiftKey) {
         this.layoutBuses.forEach(bus => bus.selected = false)
-        this.layoutEdges.forEach(e => {
-          if (e !== edge) e.selected = false
+        this.layoutEdges.forEach(edg => {
+          if (edg !== edge) edg.selected = false
         })
         this.activeTerminals = []
       }
@@ -482,6 +535,9 @@ export default {
       this.emitSelectionChanged()
     },
     handleTerminalCapClick(edge, cap, e) {
+      // Only handle left-clicks, ignore right-clicks (handled by contextmenu)
+      if (e?.evt?.button !== 0) return
+
       const shiftKey = e?.evt?.shiftKey || false
 
       console.log('Terminal cap clicked:', cap.terminalEnd, 'of edge', edge.name)
@@ -495,7 +551,7 @@ export default {
 
       if (!shiftKey) {
         this.layoutBuses.forEach(bus => bus.selected = false)
-        this.layoutEdges.forEach(e => e.selected = false)
+        this.layoutEdges.forEach(edg => edg.selected = false)
 
         // Clear all terminals except the one being clicked if it was selected
         if (wasSelected) {
@@ -538,11 +594,23 @@ export default {
     handleStageRightClick(e) {
       e.evt.preventDefault()
 
+      const selectedBuses = this.layoutBuses.filter(b => b.selected)
+      const selectedEdges = this.layoutEdges.filter(edge => edge.selected)
+      const totalSelected = selectedBuses.length + selectedEdges.length
+
       this.contextMenu.show = false
       this.contextMenu.x = e.evt.clientX
       this.contextMenu.y = e.evt.clientY
-      this.contextMenu.objectType = 'Background'
-      this.contextMenu.targetObject = null
+
+      if (totalSelected > 1) {
+        // Multiple objects selected
+        this.contextMenu.objectType = 'Multiple Selection'
+        this.contextMenu.targetObject = null
+      } else {
+        // No selection or single selection - show background menu
+        this.contextMenu.objectType = 'Background'
+        this.contextMenu.targetObject = null
+      }
 
       this.$nextTick(() => {
         this.contextMenu.show = true
@@ -555,20 +623,49 @@ export default {
       e.evt.stopPropagation() // Prevent event from bubbling to stage
       e.cancelBubble = true // For Konva compatibility
 
-      this.layoutBuses.forEach(b => b.selected = false)
-      this.layoutEdges.forEach(edge => edge.selected = false)
+      const selectedBuses = this.layoutBuses.filter(b => b.selected)
+      const selectedEdges = this.layoutEdges.filter(edge => edge.selected)
+      const totalSelected = selectedBuses.length + selectedEdges.length
 
-      bus.selected = true
-
-      this.contextMenu.show = false
-      this.contextMenu.x = e.evt.clientX
-      this.contextMenu.y = e.evt.clientY
-      this.contextMenu.objectType = 'Bus'
-      this.contextMenu.targetObject = bus
-
-      this.$nextTick(() => {
-        this.contextMenu.show = true
+      console.log('Bus right-click DEBUG:', {
+        busName: bus.name,
+        busSelected: bus.selected,
+        selectedBuses: selectedBuses.length,
+        selectedEdges: selectedEdges.length,
+        totalSelected: totalSelected,
+        willShowMultiSelect: totalSelected > 1 && bus.selected
       })
+
+      // If multiple objects are selected and this bus is one of them, show multi-select menu
+      if (totalSelected > 1 && bus.selected) {
+        console.log('Showing multi-select menu')
+        this.contextMenu.show = false
+        this.contextMenu.x = e.evt.clientX
+        this.contextMenu.y = e.evt.clientY
+        this.contextMenu.objectType = 'Multiple Selection'
+        this.contextMenu.targetObject = null
+
+        this.$nextTick(() => {
+          this.contextMenu.show = true
+        })
+      } else {
+        console.log('Showing single-select menu, clearing other selections')
+        // Single selection - clear others and select this bus
+        this.layoutBuses.forEach(b => b.selected = false)
+        this.layoutEdges.forEach(edge => edge.selected = false)
+
+        bus.selected = true
+
+        this.contextMenu.show = false
+        this.contextMenu.x = e.evt.clientX
+        this.contextMenu.y = e.evt.clientY
+        this.contextMenu.objectType = 'Bus'
+        this.contextMenu.targetObject = bus
+
+        this.$nextTick(() => {
+          this.contextMenu.show = true
+        })
+      }
 
       console.log('Bus right-clicked:', bus.name, 'at', e.evt.clientX, e.evt.clientY)
       this.$emit('bus-right-click', { bus, x: e.evt.clientX, y: e.evt.clientY })
@@ -578,20 +675,38 @@ export default {
       e.evt.stopPropagation() // Prevent event from bubbling to stage
       e.cancelBubble = true // For Konva compatibility
 
-      this.layoutBuses.forEach(b => b.selected = false)
-      this.layoutEdges.forEach(e => e.selected = false)
+      const selectedBuses = this.layoutBuses.filter(b => b.selected)
+      const selectedEdges = this.layoutEdges.filter(edg => edg.selected)
+      const totalSelected = selectedBuses.length + selectedEdges.length
 
-      edge.selected = true
+      // If multiple objects are selected and this edge is one of them, show multi-select menu
+      if (totalSelected > 1 && edge.selected) {
+        this.contextMenu.show = false
+        this.contextMenu.x = e.evt.clientX
+        this.contextMenu.y = e.evt.clientY
+        this.contextMenu.objectType = 'Multiple Selection'
+        this.contextMenu.targetObject = null
 
-      this.contextMenu.show = false
-      this.contextMenu.x = e.evt.clientX
-      this.contextMenu.y = e.evt.clientY
-      this.contextMenu.objectType = 'Branch'
-      this.contextMenu.targetObject = edge
+        this.$nextTick(() => {
+          this.contextMenu.show = true
+        })
+      } else {
+        // Single selection - clear others and select this edge
+        this.layoutBuses.forEach(b => b.selected = false)
+        this.layoutEdges.forEach(edg => edg.selected = false)
 
-      this.$nextTick(() => {
-        this.contextMenu.show = true
-      })
+        edge.selected = true
+
+        this.contextMenu.show = false
+        this.contextMenu.x = e.evt.clientX
+        this.contextMenu.y = e.evt.clientY
+        this.contextMenu.objectType = 'Branch'
+        this.contextMenu.targetObject = edge
+
+        this.$nextTick(() => {
+          this.contextMenu.show = true
+        })
+      }
 
       console.log('Branch right-clicked:', edge.name)
       this.$emit('edge-right-click', { edge, x: e.evt.clientX, y: e.evt.clientY })
@@ -621,10 +736,10 @@ export default {
 
       this.contextMenu.show = false
     },
-    handleShowBus() {
+    handleAddBus() {
       console.log('Show Bus clicked from context menu')
       // Emit event to parent component to handle add bus action
-      this.$emit('show-bus-click')
+      this.$emit('add-bus-click')
       this.contextMenu.show = false
     },
     handleCreateBus() {
@@ -645,6 +760,26 @@ export default {
       }
 
       this.contextMenu.show = false
+    },
+    handleHideSelected() {
+      // Hide all selected buses
+      const selectedBuses = this.layoutBuses.filter(b => b.selected)
+      selectedBuses.forEach(bus => {
+        bus.hidden = true
+        bus.selected = false
+        console.log('Hiding bus:', bus.name)
+      })
+
+      // Hide all selected edges
+      const selectedEdges = this.layoutEdges.filter(e => e.selected)
+      selectedEdges.forEach(edge => {
+        edge.hidden = true
+        edge.selected = false
+        console.log('Hiding branch:', edge.name)
+      })
+
+      this.contextMenu.show = false
+      this.emitSelectionChanged()
     },
     handleWheel(e) {
       e.evt.preventDefault()
@@ -669,7 +804,31 @@ export default {
       stage.position(newPos)
     },
     handleMouseDown(e) {
+      // Left mouse button - rectangle selection on empty canvas
       if (e.evt.button === 0) {
+        const clickedOnEmpty = e.target === e.target.getStage() || e.target.getType() === 'Layer'
+
+        if (clickedOnEmpty) {
+          // Start rectangle selection
+          const stage = e.target.getStage()
+          const pointerPos = stage.getPointerPosition()
+          const scale = stage.scaleX()
+
+          // Convert pointer position to stage coordinates
+          const x = (pointerPos.x - stage.x()) / scale
+          const y = (pointerPos.y - stage.y()) / scale
+
+          this.isSelecting = true
+          this.selectionRect.x = x
+          this.selectionRect.y = y
+          this.selectionRect.width = 0
+          this.selectionRect.height = 0
+          this.selectionRect.visible = true
+        }
+      }
+      // Middle mouse button - pan canvas
+      else if (e.evt.button === 1) {
+        e.evt.preventDefault() // Prevent default middle-click behavior
         this.isDragging = true
         this.lastMousePos = {
           x: e.evt.clientX,
@@ -678,7 +837,23 @@ export default {
       }
     },
     handleMouseMove(e) {
-      if (this.isDragging && this.lastMousePos) {
+      if (this.isSelecting) {
+        // Update selection rectangle
+        const stage = e.target.getStage()
+        const pointerPos = stage.getPointerPosition()
+        const scale = stage.scaleX()
+
+        // Convert pointer position to stage coordinates
+        const currentX = (pointerPos.x - stage.x()) / scale
+        const currentY = (pointerPos.y - stage.y()) / scale
+
+        // Calculate rectangle dimensions (handle dragging in any direction)
+        const startX = this.selectionRect.x
+        const startY = this.selectionRect.y
+
+        this.selectionRect.width = currentX - startX
+        this.selectionRect.height = currentY - startY
+      } else if (this.isDragging && this.lastMousePos) {
         const dx = e.evt.clientX - this.lastMousePos.x
         const dy = e.evt.clientY - this.lastMousePos.y
 
@@ -692,6 +867,28 @@ export default {
       }
     },
     handleMouseUp() {
+      if (this.isSelecting) {
+        // Select all objects within the selection rectangle
+        this.layoutBuses.forEach(bus => {
+          if (this.isObjectInSelection(bus, this.selectionRect)) {
+            bus.selected = true
+          }
+        })
+
+        this.layoutEdges.forEach(edge => {
+          if (this.isObjectInSelection(edge, this.selectionRect)) {
+            edge.selected = true
+          }
+        })
+
+        // Hide selection rectangle
+        this.selectionRect.visible = false
+        this.isSelecting = false
+
+        // Emit selection changed event
+        this.emitSelectionChanged()
+      }
+
       this.isDragging = false
       this.lastMousePos = null
     },
@@ -711,6 +908,58 @@ export default {
         edges: selectedEdges,
         terminals: selectedTerminals
       })
+    },
+    unhideBusesAndBranches(busIds, branchIds) {
+      // Unhide specific buses and branches (used after grow operation)
+      const busIdSet = new Set(busIds.map(id => String(id)))
+      const branchIdSet = new Set(branchIds.map(id => String(id)))
+
+      this.layoutBuses.forEach(bus => {
+        if (busIdSet.has(bus.id)) {
+          bus.hidden = false
+        }
+      })
+
+      this.layoutEdges.forEach(edge => {
+        if (branchIdSet.has(edge.id)) {
+          edge.hidden = false
+        }
+      })
+
+      console.log(`Unhid ${busIds.length} buses and ${branchIds.length} branches from grow operation`)
+    },
+    isObjectInSelection(obj, selRect) {
+      // Normalize selection rectangle to handle negative widths/heights
+      const x1 = selRect.width >= 0 ? selRect.x : selRect.x + selRect.width
+      const y1 = selRect.height >= 0 ? selRect.y : selRect.y + selRect.height
+      const x2 = selRect.width >= 0 ? selRect.x + selRect.width : selRect.x
+      const y2 = selRect.height >= 0 ? selRect.y + selRect.height : selRect.y
+
+      // Check if bus is in selection (rectangle intersection)
+      if (obj.width !== undefined && obj.height !== undefined) {
+        const busX1 = obj.x
+        const busY1 = obj.y
+        const busX2 = obj.x + obj.width
+        const busY2 = obj.y + obj.height
+
+        // Check if rectangles intersect
+        return !(busX2 < x1 || busX1 > x2 || busY2 < y1 || busY1 > y2)
+      }
+
+      // Check if edge is in selection (any point within bounds)
+      if (obj.points !== undefined) {
+        const points = obj.points
+        for (let i = 0; i < points.length; i += 2) {
+          const px = points[i]
+          const py = points[i + 1]
+
+          if (px >= x1 && px <= x2 && py >= y1 && py <= y2) {
+            return true
+          }
+        }
+      }
+
+      return false
     }
   }
 }

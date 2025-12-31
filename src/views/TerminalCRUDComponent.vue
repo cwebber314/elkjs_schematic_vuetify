@@ -62,6 +62,7 @@
         </v-col>
         <v-col>
           <SchematicEditor2
+            ref="schematicEditor"
             :networkData="networkData"
             :width="editorWidth"
             :height="editorHeight"
@@ -71,7 +72,7 @@
             @selection-changed="handleSelectionChanged"
             @properties-click="handlePropertiesClick"
             @grow-click="handleGrowClick"
-            @show-bus-click="handleShowBusClick"
+            @add-bus-click="handleAddBusClick"
           />
         </v-col>
       </v-row>
@@ -137,7 +138,7 @@
                     <v-icon
                       size="small"
                       color="blue"
-                      @click="viewBus(item)"
+                      @click="addBus(item)"
                       title="View Details">
                       mdi-information-outline
                     </v-icon>
@@ -271,7 +272,7 @@
 
     <EditBus
       v-if="currentBus"
-      v-model="showBusDialog"
+      v-model="addBusDialog"
       :node="currentBus"
     />
 
@@ -355,7 +356,7 @@ export default {
       editorHeight: window.innerHeight * 0.5 - 80,
       // Dialog states
       showBranchDialog: false,
-      showBusDialog: false,
+      addBusDialog: false,
       showSelectBusDialog: false,
       showEquipmentDialog: false,
       showSectionDialog: false,
@@ -530,6 +531,7 @@ export default {
   },
   async mounted() {
     window.addEventListener('resize', this.handleResize)
+    window.addEventListener('keydown', this.handleKeyPress)
 
     // Load all sections data on component mount
     try {
@@ -542,6 +544,7 @@ export default {
   },
   beforeUnmount() {
     window.removeEventListener('resize', this.handleResize)
+    window.removeEventListener('keydown', this.handleKeyPress)
   },
   methods: {
     // Helper method to sum section lengths
@@ -572,6 +575,57 @@ export default {
       this.editorWidth = window.innerWidth - 48
       this.editorHeight = window.innerHeight * 0.5 - 80
     },
+    handleKeyPress(event) {
+      // Ignore keypress if user is typing in an input field
+      const tagName = event.target.tagName.toLowerCase()
+      if (tagName === 'input' || tagName === 'textarea' || event.target.isContentEditable) {
+        return
+      }
+
+      // Handle keyboard shortcuts
+      if (event.key === 'g' || event.key === 'G') {
+        // Grow shortcut - only works if exactly one bus is selected
+        if (this.selectedBuses.length === 1 && this.selectedEdges.length === 0) {
+          event.preventDefault()
+          const bus = this.selectedBuses[0]
+          console.log('Grow shortcut triggered for bus:', bus.name)
+          this.handleGrowClick({ objectType: 'Bus', targetObject: bus })
+        }
+      } else if (event.key === 'h' || event.key === 'H') {
+        // Hide shortcut - works on any selection
+        const totalSelected = this.selectedBuses.length + this.selectedEdges.length
+        if (totalSelected > 0) {
+          event.preventDefault()
+          console.log('Hide shortcut triggered for', totalSelected, 'items')
+
+          // Hide all selected buses
+          this.selectedBuses.forEach(bus => {
+            if (this.$refs.schematicEditor) {
+              const layoutBus = this.$refs.schematicEditor.layoutBuses.find(b => b.id === bus.id)
+              if (layoutBus) {
+                layoutBus.hidden = true
+                layoutBus.selected = false
+              }
+            }
+          })
+
+          // Hide all selected edges
+          this.selectedEdges.forEach(edge => {
+            if (this.$refs.schematicEditor) {
+              const layoutEdge = this.$refs.schematicEditor.layoutEdges.find(e => e.id === edge.id)
+              if (layoutEdge) {
+                layoutEdge.hidden = true
+                layoutEdge.selected = false
+              }
+            }
+          })
+
+          // Clear selection
+          this.selectedBuses = []
+          this.selectedEdges = []
+        }
+      }
+    },
     handlePropertiesClick({ objectType, targetObject }) {
       console.log('Properties clicked from context menu:', objectType, targetObject)
 
@@ -589,7 +643,7 @@ export default {
           width: targetObject.width || 0,
           height: targetObject.height || 0
         }
-        this.showBusDialog = true
+        this.addBusDialog = true
       } else if (objectType === 'Branch') {
         // Open EditBranch dialog
         const branchData = this.networkData.branches.find(b => b.id === parseInt(targetObject.id))
@@ -621,6 +675,14 @@ export default {
             // Merge the new network data with existing data
             this.mergeNetworkData(network)
 
+            // Unhide all buses and branches from the grow result
+            await this.$nextTick() // Wait for layout to recompute
+            if (this.$refs.schematicEditor) {
+              const busIds = network.buses.map(bus => bus.id)
+              const branchIds = network.branches.map(branch => branch.id)
+              this.$refs.schematicEditor.unhideBusesAndBranches(busIds, branchIds)
+            }
+
             console.log(`Grew network from ${targetObject.name}:`, network)
             console.log('Total buses:', this.networkData.buses.length)
             console.log('Total branches:', this.networkData.branches.length)
@@ -650,7 +712,7 @@ export default {
 
       console.log(`Added ${newBuses.length} new buses and ${newBranches.length} new branches`)
     },
-    handleShowBusClick() {
+    handleAddBusClick() {
       console.log('Show Bus clicked from schematic context menu')
       this.showSelectBusDialog = true
     },
@@ -750,7 +812,7 @@ export default {
       this.currentSection = { ...item }
       this.showSectionDialog = true
     },
-    viewBus(item) {
+    addBus(item) {
       console.log('View bus:', item)
       // Find the bus data from the current network data
       const busData = this.networkData.buses.find(b => b.id === item.id)
@@ -765,7 +827,7 @@ export default {
         width: 0,
         height: 0
       }
-      this.showBusDialog = true
+      this.addBusDialog = true
     },
     viewBranch(item) {
       console.log('View branch:', item)
