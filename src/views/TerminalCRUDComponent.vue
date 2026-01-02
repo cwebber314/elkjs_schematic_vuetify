@@ -42,6 +42,14 @@
               @click="showSelectBusDialog = true">
             </v-btn>
             <v-btn
+              icon="mdi-cog"
+              title="Display Configuration"
+              size="large"
+              variant="flat"
+              color="surface"
+              @click="openDisplayConfig">
+            </v-btn>
+            <v-btn
               v-if="false"
               icon="mdi-vector-point-plus"
               title="Add Bus"
@@ -783,6 +791,12 @@ export default {
     handleAddBusClick() {
       console.log('Show Bus clicked from schematic context menu')
       this.showSelectBusDialog = true
+    },
+    openDisplayConfig() {
+      console.log('Display Configuration button clicked')
+      if (this.$refs.schematicEditor) {
+        this.$refs.schematicEditor.showDisplayDialog = true
+      }
     },
     editEquipment(item) {
       console.log('Edit equipment:', item)

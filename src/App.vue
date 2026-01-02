@@ -21,6 +21,14 @@
 
       <v-list nav density="compact">
         <v-list-item
+          prepend-icon="mdi-theme-light-dark"
+          title="Toggle Dark Mode"
+          @click="toggleTheme"
+        ></v-list-item>
+
+        <v-divider></v-divider>
+
+        <v-list-item
           prepend-icon="mdi-gesture-tap"
           title="Simple"
           value="simple"
@@ -114,11 +122,27 @@
 </template>
 
 <script>
+import { useTheme } from 'vuetify'
+
 export default {
   name: 'App',
+  setup() {
+    const theme = useTheme()
+
+    return {
+      theme
+    }
+  },
   data() {
     return {
       drawer: false
+    }
+  },
+  methods: {
+    toggleTheme() {
+      // this.theme.global.name.value = this.theme.global.current.value.dark ? 'light' : 'dark'
+      const newTheme = this.theme.global.current.value.dark ? 'light' : 'dark'
+      this.theme.change(newTheme)
     }
   }
 }

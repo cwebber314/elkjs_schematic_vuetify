@@ -47,12 +47,58 @@
             :config="{
               x: edge.labelX,
               y: edge.labelY,
-              text: edge.name,
+              text: formatEdgeLabel(edge),
               fontSize: 12,
               fill: textColor,
+              // fill: 'var(--v-theme-on-surface)',
               align: 'center'
             }"
           />
+
+          <!-- Draw transformer symbols -->
+          <template v-for="edge in visibleEdges" :key="'transformer-' + edge.id">
+            <v-group v-if="networkData.branches.find(b => b.id === parseInt(edge.id))?.edge_type === 'transformer'">
+              <!-- Background-colored line to hide edge behind symbol -->
+              <v-line
+                :config="{
+                  points: [
+                    getTransformerSymbolConfig(edge)?.lineStartX,
+                    getTransformerSymbolConfig(edge)?.lineStartY,
+                    getTransformerSymbolConfig(edge)?.lineEndX,
+                    getTransformerSymbolConfig(edge)?.lineEndY
+                  ],
+                  stroke: backgroundColor,
+                  strokeWidth: 6,
+                  listening: false
+                }"
+              />
+              <!-- Two overlapping circles for IEC transformer symbol -->
+              <v-circle
+                :config="{
+                  x: getTransformerSymbolConfig(edge)?.circle1X,
+                  y: getTransformerSymbolConfig(edge)?.circle1Y,
+                  radius: getTransformerSymbolConfig(edge)?.radius,
+                  stroke: edge.selected ? selectionStyle.stroke : edgeStyle.stroke,
+                  strokeWidth: edge.selected ? 3 : 2,
+                  fill: 'transparent'
+                }"
+                @click="handleEdgeClick(edge, $event)"
+                @contextmenu="handleEdgeRightClick(edge, $event)"
+              />
+              <v-circle
+                :config="{
+                  x: getTransformerSymbolConfig(edge)?.circle2X,
+                  y: getTransformerSymbolConfig(edge)?.circle2Y,
+                  radius: getTransformerSymbolConfig(edge)?.radius,
+                  stroke: edge.selected ? selectionStyle.stroke : edgeStyle.stroke,
+                  strokeWidth: edge.selected ? 3 : 2,
+                  fill: 'transparent'
+                }"
+                @click="handleEdgeClick(edge, $event)"
+                @contextmenu="handleEdgeRightClick(edge, $event)"
+              />
+            </v-group>
+          </template>
 
           <!-- Draw buses as rectangles -->
           <v-group
@@ -67,10 +113,11 @@
               :config="{
                 x: bus.labelX,
                 y: bus.labelY,
-                text: bus.name,
+                text: formatBusLabel(bus),
                 fontSize: 14,
                 fontStyle: 'bold',
                 fill: textColor
+                // fill: 'var(--v-theme-on-surface)'
               }"
             />
           </v-group>
@@ -119,6 +166,13 @@
             <v-list-item v-if="false" @click="handleCreateBus">
               <v-list-item-title>Create Bus</v-list-item-title>
             </v-list-item>
+
+            <v-divider></v-divider>
+
+            <!-- Display Configuration -->
+            <v-list-item @click="handleDisplayConfig">
+              <v-list-item-title>Display Configuration...</v-list-item-title>
+            </v-list-item>
           </template>
 
           <!-- Multiple Selection context menu -->
@@ -143,15 +197,191 @@
         </v-list>
       </v-card>
     </div>
+
+    <!-- Display Configuration Dialog -->
+    <v-dialog v-model="showDisplayDialog" max-width="600" scrollable>
+      <v-card>
+        <v-card-title>Display Configuration</v-card-title>
+        <v-card-text style="max-height: 600px;">
+          <div class="mb-4">
+            <h4>Bus Labels</h4>
+            <p class="text-caption">Select which attributes to display on buses</p>
+          </div>
+          <v-checkbox
+            v-model="busDisplayConfig.id"
+            label="ID"
+            density="compact"
+            hide-details></v-checkbox>
+          <v-checkbox
+            v-model="busDisplayConfig.name"
+            label="Name"
+            density="compact"
+            hide-details></v-checkbox>
+          <v-checkbox
+            v-model="busDisplayConfig.bus_num"
+            label="Bus Number"
+            density="compact"
+            hide-details></v-checkbox>
+          <v-checkbox
+            v-model="busDisplayConfig.kv"
+            label="kV"
+            density="compact"
+            hide-details></v-checkbox>
+
+          <v-divider class="my-4"></v-divider>
+
+          <div class="mb-4">
+            <h4>Branch Labels</h4>
+            <p class="text-caption">Select which attributes to display on branches</p>
+          </div>
+          <v-checkbox
+            v-model="edgeDisplayConfig.id"
+            label="ID"
+            density="compact"
+            hide-details></v-checkbox>
+          <v-checkbox
+            v-model="edgeDisplayConfig.name"
+            label="Name"
+            density="compact"
+            hide-details></v-checkbox>
+          <v-checkbox
+            v-model="edgeDisplayConfig.ckt"
+            label="Circuit"
+            density="compact"
+            hide-details></v-checkbox>
+
+          <v-divider class="my-4"></v-divider>
+
+          <div class="mb-4">
+            <h4>Bus Voltage Colors 
+              <v-btn icon="mdi-reload" title="reset to default" @click="resetVoltageColors"></v-btn>
+              <v-btn icon="mdi-abacus" title="load chips colors" @click="setVoltageColorsChip"></v-btn>
+            </h4>
+            <p class="text-caption">Configure colors for different voltage ranges</p>
+          </div>
+
+          <div class="voltage-color-config">
+            <div class="voltage-range mb-2">
+              <div class="d-flex align-center justify-space-between">
+                <span class="voltage-label">< 50kV</span>
+                <v-menu :close-on-content-click="false">
+                  <template v-slot:activator="{ props }">
+                    <div class="color-swatch" :style="{ backgroundColor: voltageColors.under50 }" v-bind="props"></div>
+                  </template>
+                  <v-card>
+                    <v-color-picker show-swatches :swatches="swatches" v-model="voltageColors.under50" mode="hex"></v-color-picker>
+                  </v-card>
+                </v-menu>
+              </div>
+            </div>
+
+            <div class="voltage-range mb-2">
+              <div class="d-flex align-center justify-space-between">
+                <span class="voltage-label">50kV - 100kV</span>
+                <v-menu :close-on-content-click="false">
+                  <template v-slot:activator="{ props }">
+                    <div class="color-swatch" :style="{ backgroundColor: voltageColors.range50_100 }" v-bind="props"></div>
+                  </template>
+                  <v-card>
+                    <v-color-picker show-swatches :swatches="swatches" v-model="voltageColors.range50_100" mode="hex"></v-color-picker>
+                  </v-card>
+                </v-menu>
+              </div>
+            </div>
+
+            <div class="voltage-range mb-2">
+              <div class="d-flex align-center justify-space-between">
+                <span class="voltage-label">100kV - 200kV</span>
+                <v-menu :close-on-content-click="false">
+                  <template v-slot:activator="{ props }">
+                    <div class="color-swatch" :style="{ backgroundColor: voltageColors.range100_200 }" v-bind="props"></div>
+                  </template>
+                  <v-card>
+                    <v-color-picker show-swatches :swatches="swatches"v-model="voltageColors.range100_200" mode="hex"></v-color-picker>
+                  </v-card>
+                </v-menu>
+              </div>
+            </div>
+
+            <div class="voltage-range mb-2">
+              <div class="d-flex align-center justify-space-between">
+                <span class="voltage-label">200kV - 300kV</span>
+                <v-menu :close-on-content-click="false">
+                  <template v-slot:activator="{ props }">
+                    <div class="color-swatch" :style="{ backgroundColor: voltageColors.range200_300 }" v-bind="props"></div>
+                  </template>
+                  <v-card>
+                    <v-color-picker show-swatches :swatches="swatches"v-model="voltageColors.range200_300" mode="hex"></v-color-picker>
+                  </v-card>
+                </v-menu>
+              </div>
+            </div>
+
+            <div class="voltage-range mb-2">
+              <div class="d-flex align-center justify-space-between">
+                <span class="voltage-label">300kV - 400kV</span>
+                <v-menu :close-on-content-click="false">
+                  <template v-slot:activator="{ props }">
+                    <div class="color-swatch" :style="{ backgroundColor: voltageColors.range300_400 }" v-bind="props"></div>
+                  </template>
+                  <v-card>
+                    <v-color-picker show-swatches :swatches="swatches"v-model="voltageColors.range300_400" mode="hex"></v-color-picker>
+                  </v-card>
+                </v-menu>
+              </div>
+            </div>
+
+            <div class="voltage-range mb-2">
+              <div class="d-flex align-center justify-space-between">
+                <span class="voltage-label">400kV - 600kV</span>
+                <v-menu :close-on-content-click="false">
+                  <template v-slot:activator="{ props }">
+                    <div class="color-swatch" :style="{ backgroundColor: voltageColors.range400_600 }" v-bind="props"></div>
+                  </template>
+                  <v-card>
+                    <v-color-picker show-swatches :swatches="swatches"v-model="voltageColors.range400_600" mode="hex"></v-color-picker>
+                  </v-card>
+                </v-menu>
+              </div>
+            </div>
+
+            <div class="voltage-range mb-2">
+              <div class="d-flex align-center justify-space-between">
+                <span class="voltage-label">> 700kV</span>
+                <v-menu :close-on-content-click="false">
+                  <template v-slot:activator="{ props }">
+                    <div class="color-swatch" :style="{ backgroundColor: voltageColors.over700 }" v-bind="props"></div>
+                  </template>
+                  <v-card>
+                    <v-color-picker show-swatches :swatches="swatches"v-model="voltageColors.over700" mode="hex"></v-color-picker>
+                  </v-card>
+                </v-menu>
+              </div>
+            </div>
+          </div>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn color="primary" variant="text" @click="showDisplayDialog = false">Close</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </div>
 </template>
 
 <script>
 import ELK from 'elkjs/lib/elk.bundled.js'
 import colors from 'vuetify/util/colors'
+import { useTheme } from 'vuetify'
 
 export default {
   name: 'SchematicEditor2',
+  setup() {
+    const vuetifyTheme = useTheme()
+    return {
+      vuetifyTheme
+    }
+  },
   props: {
     networkData: {
       type: Object,
@@ -209,7 +439,56 @@ export default {
         y: 0,
         objectType: '',
         targetObject: null
-      }
+      },
+      showDisplayDialog: false,
+      busDisplayConfig: {
+        id: false,
+        name: true,
+        bus_num: false,
+        kv: false
+      },
+      edgeDisplayConfig: {
+        id: false,
+        name: true,
+        ckt: false
+      },
+      voltageColors: {
+        under50: colors.brown.base,
+        range50_100: colors.deepPurple.base,
+        range100_200: colors.red.base,
+        range200_300: colors.indigo.base,
+        range300_400: colors.green.base,
+        range400_600: colors.blue.base,
+        over700: colors.orange.base
+      },
+      voltageColorsDefault: {
+        under50: colors.blue.base,
+        range50_100: colors.blue.base,
+        range100_200: colors.blue.base,
+        range200_300: colors.blue.base,
+        range300_400: colors.blue.base,
+        range400_600: colors.blue.base,
+        over700: colors.blue.base
+      },
+      voltageColorsChip: {
+        under50: colors.brown.base,
+        range50_100: colors.deepPurple.base,
+        range100_200: colors.red.base,
+        range200_300: colors.indigo.base,
+        range300_400: colors.green.base,
+        range400_600: colors.blue.base,
+        over700: colors.orange.base
+      },
+
+      // first dimension is the columns, second dimension is the rows 
+      // this feels backwards
+      swatches: [
+          [colors.red.base, colors.pink.base, colors.purple.base, colors.deepOrange.base],
+          [colors.deepPurple.base, colors.indigo.base, colors.blue.base, colors.brown.base],
+          [colors.lightBlue.base, colors.cyan.base, colors.teal.base, colors.blueGrey.base],
+          [colors.green.base, colors.lightGreen.base, colors.lime.base, colors.grey.base],
+          [colors.yellow.base, colors.amber.base, colors.orange.base],
+      ],
     }
   },
   computed: {
@@ -218,9 +497,6 @@ export default {
     },
     visibleEdges() {
       return this.layoutEdges.filter(edge => !edge.hidden)
-    },
-    themeColors() {
-      return this.$vuetify.theme.current.colors
     },
     selectionStyle() {
       return {
@@ -249,7 +525,25 @@ export default {
       }
     },
     textColor() {
-      return this.themeColors['on-surface']
+      // white: 255, 255, 255
+      // black: 0, 0, 0
+      // light grey: #EEEEEE
+      // you can't return '0,0,0' as a color. You have to return 'rgb(0,0,0)' or '#000000'
+      const color1_raw = getComputedStyle(document.documentElement).getPropertyValue('--v-theme-on-surface').trim()
+      const color1 = `rgb(${color1_raw})`
+      console.log("textColor 1(): ", color1)
+      // const color2 = this.vuetifyTheme.current.value.colors['on-surface']
+      // console.log("textColor 2(): ", color2)
+      return color1
+      // return 'rgb(255,4,103)'
+      // return '#EEEEEE'
+      // Use reactive theme from useTheme() - falls back to on-surface-variant since onSurface isn't in colors
+      // return this.vuetifyTheme.current.value.colors['on-surface-variant'] ||
+      //        getComputedStyle(document.documentElement).getPropertyValue('--v-theme-on-surface').trim()
+    },
+    backgroundColor() {
+      console.log("backgroundColor()")
+      return this.vuetifyTheme.current.value.colors.surface
     }
   },
   watch: {
@@ -264,10 +558,70 @@ export default {
         this.computeLayout()
       },
       deep: true
+    },
+    busDisplayConfig: {
+      handler(newVal) {
+        // Save display configuration to localStorage
+        localStorage.setItem('busDisplayConfig', JSON.stringify(newVal))
+        console.log('Saved bus display config to localStorage:', newVal)
+      },
+      deep: true
+    },
+    edgeDisplayConfig: {
+      handler(newVal) {
+        // Save display configuration to localStorage
+        localStorage.setItem('edgeDisplayConfig', JSON.stringify(newVal))
+        console.log('Saved edge display config to localStorage:', newVal)
+      },
+      deep: true
+    },
+    voltageColors: {
+      handler(newVal) {
+        // Save voltage colors to localStorage
+        localStorage.setItem('voltageColors', JSON.stringify(newVal))
+        console.log('Saved voltage colors to localStorage:', newVal)
+      },
+      deep: true
     }
   },
   async mounted() {
     try {
+      // Restore bus display configuration from localStorage
+      const savedBusConfig = localStorage.getItem('busDisplayConfig')
+      if (savedBusConfig) {
+        try {
+          const config = JSON.parse(savedBusConfig)
+          this.busDisplayConfig = { ...this.busDisplayConfig, ...config }
+          console.log('Restored bus display config from localStorage:', config)
+        } catch (e) {
+          console.error('Error parsing saved bus display config:', e)
+        }
+      }
+
+      // Restore edge display configuration from localStorage
+      const savedEdgeConfig = localStorage.getItem('edgeDisplayConfig')
+      if (savedEdgeConfig) {
+        try {
+          const config = JSON.parse(savedEdgeConfig)
+          this.edgeDisplayConfig = { ...this.edgeDisplayConfig, ...config }
+          console.log('Restored edge display config from localStorage:', config)
+        } catch (e) {
+          console.error('Error parsing saved edge display config:', e)
+        }
+      }
+
+      // Restore voltage colors from localStorage
+      const savedVoltageColors = localStorage.getItem('voltageColors')
+      if (savedVoltageColors) {
+        try {
+          const colors = JSON.parse(savedVoltageColors)
+          this.voltageColors = { ...this.voltageColors, ...colors }
+          console.log('Restored voltage colors from localStorage:', colors)
+        } catch (e) {
+          console.error('Error parsing saved voltage colors:', e)
+        }
+      }
+
       await this.computeLayout()
       this.loading = false
       window.addEventListener('click', this.handleClickOutside)
@@ -290,9 +644,15 @@ export default {
           'elk.direction': 'RIGHT',
           'elk.spacing.nodeNode': '30',
           'elk.layered.spacing.nodeNodeBetweenLayers': '80',
-          'elk.spacing.edgeEdge': 20,
-          'elk.edgeLabels.placement': 'TAIL',
+          // only increases spacing for edges running left-right
+          // up-down edges are not affected
+          'elk.spacing.edgeEdge': 30,
+          'elk.edgeLabels.placement': 'CENTER',
+          'elk.spacing.edgeLabel': '10',
           'elk.edgeRouting': 'ORTHOGONAL',
+          // Allow edge labels to be placed above or below edges
+          // When edges are close this makes it less likely for label to overlap edge
+          'elk.edgeLabels.sideSelection': 'SMART_DOWN',  
         },
         children: this.networkData.buses.map(bus => ({
           id: String(bus.id),
@@ -306,7 +666,7 @@ export default {
         edges: this.networkData.branches.map(branch => ({
           id: String(branch.id),
           layoutOptions: {
-            'elk.edgeLabels.placement': 'TAIL',
+            'elk.edgeLabels.placement': 'CENTER',
           },
           sources: [String(branch.bus1_id)],
           targets: [String(branch.bus2_id)],
@@ -387,21 +747,41 @@ export default {
         }
       })
     },
+    getBusColor(bus) {
+      // Get original bus data to access kV value
+      const originalBus = this.networkData.buses.find(b => b.id === parseInt(bus.id))
+      if (!originalBus || !originalBus.kv) {
+        return colors.blue.base // Default color if kV not found
+      }
+
+      const kv = originalBus.kv
+
+      if (kv < 50) return this.voltageColors.under50
+      if (kv >= 50 && kv < 100) return this.voltageColors.range50_100
+      if (kv >= 100 && kv < 200) return this.voltageColors.range100_200
+      if (kv >= 200 && kv < 300) return this.voltageColors.range200_300
+      if (kv >= 300 && kv < 400) return this.voltageColors.range300_400
+      if (kv >= 400 && kv < 700) return this.voltageColors.range400_600
+      if (kv >= 700) return this.voltageColors.over700
+
+      return colors.blue.base // Fallback
+    },
     getBusConfig(bus) {
+      const busColor = this.getBusColor(bus)
       const baseConfig = {
         x: bus.x,
         y: bus.y,
         width: bus.width,
         height: bus.height,
-        fill: colors.blue.base,
-        stroke: colors.blue.base,
+        fill: busColor,
+        stroke: busColor,
         strokeWidth: 2
       }
 
       if (bus.selected) {
         return { ...baseConfig, ...this.selectionStyle }
       }
-      return { ...baseConfig, ...this.busStyle }
+      return baseConfig
     },
     getEdgeConfig(edge) {
       const baseConfig = {
@@ -742,6 +1122,19 @@ export default {
       this.$emit('add-bus-click')
       this.contextMenu.show = false
     },
+    handleDisplayConfig() {
+      console.log('Display Configuration clicked')
+      this.contextMenu.show = false
+      this.showDisplayDialog = true
+    },
+    resetVoltageColors() {
+      this.voltageColors = { ...this.voltageColorsDefault }
+      console.log('Reset voltage colors to default')
+    },
+    setVoltageColorsChip() {
+      this.voltageColors = { ...this.voltageColorsChip }
+      console.log('Set voltage colors to chip colors')
+    },
     handleCreateBus() {
       console.log('Create Bus clicked from context menu')
       // Emit event to parent component to handle add bus action
@@ -884,6 +1277,106 @@ export default {
     getBusById(id) {
       return this.networkData.buses.find(b => b.id === parseInt(id))
     },
+    formatBusLabel(bus) {
+      // Get the original bus data from networkData
+      const originalBus = this.networkData.buses.find(b => b.id === parseInt(bus.id))
+      if (!originalBus) return bus.name
+
+      const parts = []
+      if (this.busDisplayConfig.id) parts.push(originalBus.id)
+      if (this.busDisplayConfig.name) parts.push(originalBus.name)
+      if (this.busDisplayConfig.bus_num) parts.push(originalBus.bus_num)
+      if (this.busDisplayConfig.kv) parts.push(`${originalBus.kv}kV`)
+
+      return parts.length > 0 ? parts.join(' | ') : ''
+    },
+    formatEdgeLabel(edge) {
+      // Get the original branch data from networkData
+      const originalBranch = this.networkData.branches.find(b => b.id === parseInt(edge.id))
+      if (!originalBranch) return edge.name
+
+      const parts = []
+      if (this.edgeDisplayConfig.id) parts.push(originalBranch.id)
+      if (this.edgeDisplayConfig.name) parts.push(originalBranch.name)
+      if (this.edgeDisplayConfig.ckt) parts.push(originalBranch.ckt)
+
+      return parts.length > 0 ? parts.join(' | ') : ''
+    },
+    getEdgeMidpoint(edge) {
+      // Calculate midpoint and angle for transformer symbol placement
+      const points = edge.points
+      if (!points || points.length < 4) return null
+
+      // For single segment (4 points), use true midpoint
+      if (points.length === 4) {
+        const x1 = points[0]
+        const y1 = points[1]
+        const x2 = points[2]
+        const y2 = points[3]
+
+        const midX = (x1 + x2) / 2
+        const midY = (y1 + y2) / 2
+        const angle = Math.atan2(y2 - y1, x2 - x1) * (180 / Math.PI)
+
+        return { x: midX, y: midY, angle }
+      }
+
+      // For multi-segment edges, find the middle segment
+      const numPoints = points.length / 2
+      const midPointIndex = Math.floor(numPoints / 2)
+      const midIndex = midPointIndex * 2
+
+      const x1 = points[midIndex]
+      const y1 = points[midIndex + 1]
+      const x2 = points[midIndex + 2] || x1
+      const y2 = points[midIndex + 3] || y1
+
+      // Calculate midpoint of the middle segment
+      const midX = (x1 + x2) / 2
+      const midY = (y1 + y2) / 2
+
+      // Calculate angle for perpendicular orientation
+      const angle = Math.atan2(y2 - y1, x2 - x1) * (180 / Math.PI)
+
+      return { x: midX, y: midY, angle }
+    },
+    getTransformerSymbolConfig(edge) {
+      const midpoint = this.getEdgeMidpoint(edge)
+      if (!midpoint) return null
+
+      const radius = 8
+      const spacing = 8 // Spacing between circles (increased for less overlap)
+
+      // Convert angle to radians for calculation
+      const angleRad = (midpoint.angle * Math.PI) / 180
+
+      // Calculate circle positions along the edge direction
+      const offsetX = Math.cos(angleRad) * spacing / 2
+      const offsetY = Math.sin(angleRad) * spacing / 2
+
+      // Calculate line endpoints to cover the edge behind the symbol
+      const lineLength = spacing + radius * 2
+      const lineOffsetX = Math.cos(angleRad) * lineLength / 2
+      const lineOffsetY = Math.sin(angleRad) * lineLength / 2
+
+      return {
+        midX: midpoint.x,
+        midY: midpoint.y,
+        angle: midpoint.angle,
+        radius,
+        spacing,
+        // Position circles along the edge direction
+        circle1X: midpoint.x - offsetX,
+        circle1Y: midpoint.y - offsetY,
+        circle2X: midpoint.x + offsetX,
+        circle2Y: midpoint.y + offsetY,
+        // Line to hide edge behind symbol
+        lineStartX: midpoint.x - lineOffsetX,
+        lineStartY: midpoint.y - lineOffsetY,
+        lineEndX: midpoint.x + lineOffsetX,
+        lineEndY: midpoint.y + lineOffsetY
+      }
+    },
     emitSelectionChanged() {
       const selectedBuses = this.layoutBuses.filter(b => b.selected)
       const selectedEdges = this.layoutEdges.filter(e => e.selected)
@@ -960,5 +1453,27 @@ export default {
 .schematic-sheet {
   height: 100%;
   border: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+.voltage-label {
+  font-weight: 500;
+}
+
+.voltage-color-config {
+  padding: 8px 0;
+}
+
+.color-swatch {
+  width: 40px;
+  height: 30px;
+  border: 2px solid rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.color-swatch:hover {
+  transform: scale(1.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 </style>
