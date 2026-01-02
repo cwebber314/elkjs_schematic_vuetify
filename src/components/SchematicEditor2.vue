@@ -454,7 +454,7 @@ export default {
       },
       voltageColors: {
         under50: colors.brown.base,
-        range50_100: colors.deepPurple.base,
+        range50_100: colors.teal.base,
         range100_200: colors.red.base,
         range200_300: colors.indigo.base,
         range300_400: colors.green.base,
@@ -472,7 +472,7 @@ export default {
       },
       voltageColorsChip: {
         under50: colors.brown.base,
-        range50_100: colors.deepPurple.base,
+        range50_100: colors.teal.base,
         range100_200: colors.red.base,
         range200_300: colors.indigo.base,
         range300_400: colors.green.base,
@@ -482,6 +482,7 @@ export default {
 
       // first dimension is the columns, second dimension is the rows 
       // this feels backwards
+      // maybe don't put purple in the swatches if I'm using that for the selected color
       swatches: [
           [colors.red.base, colors.pink.base, colors.purple.base, colors.deepOrange.base],
           [colors.deepPurple.base, colors.indigo.base, colors.blue.base, colors.brown.base],
@@ -841,7 +842,7 @@ export default {
       caps.push({
         config: {
           points: [startX, startY, startEndPoint.x, startEndPoint.y],
-          stroke: startSelected ? purpleColor : orangeColor,
+          stroke: startSelected ? this.terminalStyle.selectedColor : this.terminalStyle.normalColor,
           strokeWidth: terminalStrokeWidth,
           lineJoin: 'miter',
           lineCap: 'round',
