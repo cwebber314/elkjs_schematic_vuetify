@@ -254,11 +254,8 @@
 
           <v-divider class="my-4"></v-divider>
 
-          <div class="mb-4">
-            <h4>Bus Voltage Colors 
-              <v-btn icon="mdi-reload" title="reset to default" @click="resetVoltageColors"></v-btn>
-              <v-btn icon="mdi-abacus" title="load chips colors" @click="setVoltageColorsChip"></v-btn>
-            </h4>
+          <div class="mb-2">
+            <h4>Bus Voltage Colors</h4>
             <p class="text-caption">Configure colors for different voltage ranges</p>
           </div>
 
@@ -362,12 +359,19 @@
             </div>
           </div>
 
+          <div class="d-flex mt-3 mb-4" style="gap: 12px;">
+            <v-btn size="small" variant="outlined" prepend-icon="mdi-reload" @click="resetVoltageColors">
+              Reset to Default
+            </v-btn>
+            <v-btn size="small" variant="outlined" prepend-icon="mdi-palette" @click="setVoltageColorsChip">
+              Chip's Preset
+            </v-btn>
+          </div>
+
           <v-divider class="my-4"></v-divider>
 
-          <div class="mb-4">
-            <h4>Layout Options
-              <v-btn icon="mdi-reload" title="reset to default" @click="resetLayoutOptions"></v-btn>
-            </h4>
+          <div class="mb-2">
+            <h4>Layout Options</h4>
             <p class="text-caption">Configure ELK layout spacing parameters</p>
           </div>
 
@@ -403,7 +407,13 @@
             density="compact"
             hint="Height of bus nodes"
             persistent-hint
-            class="mb-4"></v-text-field>
+            class="mb-3"></v-text-field>
+
+          <div class="mb-4">
+            <v-btn size="small" variant="outlined" prepend-icon="mdi-reload" @click="resetLayoutOptions">
+              Reset to Default
+            </v-btn>
+          </div>
         </v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
@@ -1365,7 +1375,7 @@ export default {
     },
     setVoltageColorsChip() {
       this.voltageColors = { ...this.voltageColorsChip }
-      console.log('Set voltage colors to chip colors')
+      console.log('Set voltage colors to chips presets')
     },
     resetLayoutOptions() {
       this.layoutOptions = { ...this.layoutOptionsDefault }
