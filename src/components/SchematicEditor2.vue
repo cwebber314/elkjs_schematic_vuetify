@@ -22,13 +22,15 @@
         @contextmenu="handleStageRightClick">
         <v-layer>
           <!-- Draw edges (branches) with 90-degree routing -->
-          <v-line
-            v-for="edge in visibleEdges"
-            :key="'edge-' + edge.id"
-            :config="getEdgeConfig(edge)"
-            @click="handleEdgeClick(edge, $event)"
-            @contextmenu="handleEdgeRightClick(edge, $event)"
-          />
+          <template v-for="edge in visibleEdges" :key="'edge-' + edge.id">
+            <v-line
+              v-for="(segment, segIndex) in getEdgeSegments(edge)"
+              :key="'edge-' + edge.id + '-seg-' + segIndex"
+              :config="segment.config"
+              @click="handleEdgeClick(edge, $event)"
+              @contextmenu="handleEdgeRightClick(edge, $event)"
+            />
+          </template>
 
           <!-- Draw terminal caps when terminal is selected -->
           <template v-for="edge in visibleEdges" :key="'terminal-caps-' + edge.id">
@@ -359,6 +361,49 @@
               </div>
             </div>
           </div>
+
+          <v-divider class="my-4"></v-divider>
+
+          <div class="mb-4">
+            <h4>Layout Options
+              <v-btn icon="mdi-reload" title="reset to default" @click="resetLayoutOptions"></v-btn>
+            </h4>
+            <p class="text-caption">Configure ELK layout spacing parameters</p>
+          </div>
+
+          <v-text-field
+            v-model.number="layoutOptions.nodeNodeSpacing"
+            label="Node-Node Spacing"
+            density="compact"
+            hint="elk.spacing.nodeNode"
+            persistent-hint
+            class="mb-4"></v-text-field>
+
+          <v-text-field
+            v-model.number="layoutOptions.nodeNodeBetweenLayers"
+            label="Node-Node Between Layers"
+            density="compact"
+            hint="elk.layered.spacing.nodeNodeBetweenLayers"
+            persistent-hint
+            class="mb-4"></v-text-field>
+
+          <v-text-field
+            v-model.number="layoutOptions.edgeEdgeSpacing"
+            label="Edge-Edge Spacing"
+            type="number"
+            density="compact"
+            hint="elk.spacing.edgeEdge"
+            persistent-hint
+            class="mb-4"></v-text-field>
+
+          <v-text-field
+            v-model.number="layoutOptions.busHeight"
+            label="Bus Height"
+            type="number"
+            density="compact"
+            hint="Height of bus nodes"
+            persistent-hint
+            class="mb-4"></v-text-field>
         </v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
@@ -451,6 +496,18 @@ export default {
         id: false,
         name: true,
         ckt: false
+      },
+      layoutOptions: {
+        nodeNodeSpacing: 30,
+        nodeNodeBetweenLayers: 80,
+        edgeEdgeSpacing: 30,
+        busHeight: 100
+      },
+      layoutOptionsDefault: {
+        nodeNodeSpacing: 30,
+        nodeNodeBetweenLayers: 80,
+        edgeEdgeSpacing: 30,
+        busHeight: 100
       },
       voltageColors: {
         under50: colors.brown.base,
@@ -583,6 +640,16 @@ export default {
         console.log('Saved voltage colors to localStorage:', newVal)
       },
       deep: true
+    },
+    layoutOptions: {
+      handler(newVal) {
+        // Save layout options to localStorage
+        localStorage.setItem('layoutOptions', JSON.stringify(newVal))
+        console.log('Saved layout options to localStorage:', newVal)
+        // Recompute layout when layout options change
+        this.computeLayout()
+      },
+      deep: true
     }
   },
   async mounted() {
@@ -623,6 +690,18 @@ export default {
         }
       }
 
+      // Restore layout options from localStorage
+      const savedLayoutOptions = localStorage.getItem('layoutOptions')
+      if (savedLayoutOptions) {
+        try {
+          const options = JSON.parse(savedLayoutOptions)
+          this.layoutOptions = { ...this.layoutOptions, ...options }
+          console.log('Restored layout options from localStorage:', options)
+        } catch (e) {
+          console.error('Error parsing saved layout options:', e)
+        }
+      }
+
       await this.computeLayout()
       this.loading = false
       window.addEventListener('click', this.handleClickOutside)
@@ -643,22 +722,25 @@ export default {
         layoutOptions: {
           'elk.algorithm': 'layered',
           'elk.direction': 'RIGHT',
-          'elk.spacing.nodeNode': '30',
-          'elk.layered.spacing.nodeNodeBetweenLayers': '80',
+          'elk.spacing.nodeNode': String(this.layoutOptions.nodeNodeSpacing),
+          'elk.layered.spacing.nodeNodeBetweenLayers': String(this.layoutOptions.nodeNodeBetweenLayers),
           // only increases spacing for edges running left-right
           // up-down edges are not affected
-          'elk.spacing.edgeEdge': 30,
-          'elk.edgeLabels.placement': 'CENTER',
+          'elk.spacing.edgeEdge': String(this.layoutOptions.edgeEdgeSpacing),
           'elk.spacing.edgeLabel': '10',
           'elk.edgeRouting': 'ORTHOGONAL',
+          // 'elk.layered.spacing.edgeNodeBetweenLayers': 10,
+          // 'elk.spacing.edgeNode': 10,
+          'elk.layered.nodePlacement.bk.edgeStraightening': 'IMPROVE_STRAIGHTNESS',
+          // 'org.eclipse.elk.layered.nodePlacement.strategy': 'BRANDES_KOEPF',
           // Allow edge labels to be placed above or below edges
           // When edges are close this makes it less likely for label to overlap edge
-          'elk.edgeLabels.sideSelection': 'SMART_DOWN',  
+          'elk.edgeLabels.sideSelection': 'SMART_DOWN',
         },
         children: this.networkData.buses.map(bus => ({
           id: String(bus.id),
           width: 5,
-          height: 100,
+          height: this.layoutOptions.busHeight,
           layoutOptions: {
             'elk.nodeLabels.placement': 'OUTSIDE, H_LEFT, V_BOTTOM',
           },
@@ -671,7 +753,14 @@ export default {
           },
           sources: [String(branch.bus1_id)],
           targets: [String(branch.bus2_id)],
-          labels: [{ text: branch.name, width: 50, height: 10 }]
+          labels: [{
+            text: branch.name,
+            width: Math.max(branch.name.length * 7, 20),
+            height: 14,
+            layoutOptions: {
+              'elk.edgeLabels.placement': 'CENTER',
+            }
+          }]
         }))
       }
 
@@ -748,14 +837,8 @@ export default {
         }
       })
     },
-    getBusColor(bus) {
-      // Get original bus data to access kV value
-      const originalBus = this.networkData.buses.find(b => b.id === parseInt(bus.id))
-      if (!originalBus || !originalBus.kv) {
-        return colors.blue.base // Default color if kV not found
-      }
-
-      const kv = originalBus.kv
+    getColorByVoltage(kv) {
+      if (!kv) return colors.blue.base
 
       if (kv < 50) return this.voltageColors.under50
       if (kv >= 50 && kv < 100) return this.voltageColors.range50_100
@@ -765,7 +848,16 @@ export default {
       if (kv >= 400 && kv < 700) return this.voltageColors.range400_600
       if (kv >= 700) return this.voltageColors.over700
 
-      return colors.blue.base // Fallback
+      return colors.blue.base
+    },
+    getBusColor(bus) {
+      // Get original bus data to access kV value
+      const originalBus = this.networkData.buses.find(b => b.id === parseInt(bus.id))
+      if (!originalBus || !originalBus.kv) {
+        return colors.blue.base // Default color if kV not found
+      }
+
+      return this.getColorByVoltage(originalBus.kv)
     },
     getBusConfig(bus) {
       const busColor = this.getBusColor(bus)
@@ -796,6 +888,145 @@ export default {
         return { ...baseConfig, ...this.selectionStyle }
       }
       return { ...baseConfig, ...this.edgeStyle }
+    },
+    getEdgeSegments(edge) {
+      const branch = this.getBranchById(edge.id)
+      if (!branch) {
+        // Fallback: return single segment with default styling
+        return [{
+          config: this.getEdgeConfig(edge)
+        }]
+      }
+
+      const bus1 = this.networkData.buses.find(b => b.id === branch.bus1_id)
+      const bus2 = this.networkData.buses.find(b => b.id === branch.bus2_id)
+
+      if (!bus1 || !bus2) {
+        return [{
+          config: this.getEdgeConfig(edge)
+        }]
+      }
+
+      const isTransformer = branch.edge_type === 'transformer'
+      const bus1Color = this.getColorByVoltage(bus1.kv)
+      const bus2Color = this.getColorByVoltage(bus2.kv)
+
+      // For non-transformers or same-voltage transformers, use single color
+      if (!isTransformer || bus1.kv === bus2.kv) {
+        const baseConfig = {
+          points: edge.points,
+          stroke: bus1Color,
+          strokeWidth: 2,
+          lineJoin: 'miter',
+          lineCap: 'butt',
+          hitStrokeWidth: 20
+        }
+
+        if (edge.selected) {
+          return [{
+            config: { ...baseConfig, ...this.selectionStyle }
+          }]
+        }
+        return [{
+          config: baseConfig
+        }]
+      }
+
+      // For transformers with different voltages, split at transformer symbol
+      const midpoint = this.getEdgeMidpoint(edge)
+      if (!midpoint) {
+        // Fallback if we can't find midpoint
+        const baseConfig = {
+          points: edge.points,
+          stroke: bus1Color,
+          strokeWidth: 2,
+          lineJoin: 'miter',
+          lineCap: 'butt',
+          hitStrokeWidth: 20
+        }
+        return [{
+          config: edge.selected ? { ...baseConfig, ...this.selectionStyle } : baseConfig
+        }]
+      }
+
+      // Split points at transformer symbol location
+      const points = edge.points
+      const segments = []
+      const segment1Points = []
+      const segment2Points = []
+      let foundSplit = false
+
+      // Find where to split the line based on transformer midpoint
+      for (let i = 0; i < points.length - 2; i += 2) {
+        const x1 = points[i]
+        const y1 = points[i + 1]
+        const x2 = points[i + 2]
+        const y2 = points[i + 3]
+
+        if (!foundSplit) {
+          segment1Points.push(x1, y1)
+
+          // Check if midpoint is on this segment
+          const minX = Math.min(x1, x2)
+          const maxX = Math.max(x1, x2)
+          const minY = Math.min(y1, y2)
+          const maxY = Math.max(y1, y2)
+
+          if (midpoint.x >= minX - 1 && midpoint.x <= maxX + 1 &&
+              midpoint.y >= minY - 1 && midpoint.y <= maxY + 1) {
+            // This is the segment with the transformer symbol
+            segment1Points.push(midpoint.x, midpoint.y)
+            segment2Points.push(midpoint.x, midpoint.y)
+            foundSplit = true
+          }
+        } else {
+          segment2Points.push(x1, y1)
+        }
+      }
+
+      // Add the last point
+      if (foundSplit && points.length >= 2) {
+        segment2Points.push(points[points.length - 2], points[points.length - 1])
+      }
+
+      // If we didn't find a split point, just use the whole line with bus1 color
+      if (!foundSplit || segment1Points.length < 4) {
+        const baseConfig = {
+          points: edge.points,
+          stroke: bus1Color,
+          strokeWidth: 2,
+          lineJoin: 'miter',
+          lineCap: 'butt',
+          hitStrokeWidth: 20
+        }
+        return [{
+          config: edge.selected ? { ...baseConfig, ...this.selectionStyle } : baseConfig
+        }]
+      }
+
+      // Create two segments with different colors
+      const baseConfig1 = {
+        points: segment1Points,
+        stroke: edge.selected ? this.selectionStyle.stroke : bus1Color,
+        strokeWidth: edge.selected ? this.selectionStyle.strokeWidth : 2,
+        lineJoin: 'miter',
+        lineCap: 'butt',
+        hitStrokeWidth: 20
+      }
+
+      const baseConfig2 = {
+        points: segment2Points,
+        stroke: edge.selected ? this.selectionStyle.stroke : bus2Color,
+        strokeWidth: edge.selected ? this.selectionStyle.strokeWidth : 2,
+        lineJoin: 'miter',
+        lineCap: 'butt',
+        hitStrokeWidth: 20
+      }
+
+      return [
+        { config: baseConfig1 },
+        { config: baseConfig2 }
+      ]
     },
     getTerminalCaps(edge) {
       const caps = []
@@ -1136,6 +1367,10 @@ export default {
       this.voltageColors = { ...this.voltageColorsChip }
       console.log('Set voltage colors to chip colors')
     },
+    resetLayoutOptions() {
+      this.layoutOptions = { ...this.layoutOptionsDefault }
+      console.log('Reset layout options to default')
+    },
     handleCreateBus() {
       console.log('Create Bus clicked from context menu')
       // Emit event to parent component to handle add bus action
@@ -1322,22 +1557,36 @@ export default {
         return { x: midX, y: midY, angle }
       }
 
-      // For multi-segment edges, find the middle segment
-      const numPoints = points.length / 2
-      const midPointIndex = Math.floor(numPoints / 2)
-      const midIndex = midPointIndex * 2
+      // For multi-segment edges, find the longest segment
+      let longestSegment = null
+      let longestLength = 0
 
-      const x1 = points[midIndex]
-      const y1 = points[midIndex + 1]
-      const x2 = points[midIndex + 2] || x1
-      const y2 = points[midIndex + 3] || y1
+      // Iterate through all segments to find the longest one
+      for (let i = 0; i < points.length - 2; i += 2) {
+        const x1 = points[i]
+        const y1 = points[i + 1]
+        const x2 = points[i + 2]
+        const y2 = points[i + 3]
 
-      // Calculate midpoint of the middle segment
-      const midX = (x1 + x2) / 2
-      const midY = (y1 + y2) / 2
+        // Calculate segment length
+        const dx = x2 - x1
+        const dy = y2 - y1
+        const length = Math.sqrt(dx * dx + dy * dy)
+
+        if (length > longestLength) {
+          longestLength = length
+          longestSegment = { x1, y1, x2, y2 }
+        }
+      }
+
+      if (!longestSegment) return null
+
+      // Calculate midpoint of the longest segment
+      const midX = (longestSegment.x1 + longestSegment.x2) / 2
+      const midY = (longestSegment.y1 + longestSegment.y2) / 2
 
       // Calculate angle for perpendicular orientation
-      const angle = Math.atan2(y2 - y1, x2 - x1) * (180 / Math.PI)
+      const angle = Math.atan2(longestSegment.y2 - longestSegment.y1, longestSegment.x2 - longestSegment.x1) * (180 / Math.PI)
 
       return { x: midX, y: midY, angle }
     },
