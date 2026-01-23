@@ -129,6 +129,359 @@
     { "id": 75, "name": "Uranus - Ariel #1", "bus1_id": 11, "bus2_id": 27, "ckt": "1", "edge_type": "transformer"},
     { "id": 76, "name": "Neptune - Triton #1", "bus1_id": 8, "bus2_id": 17, "ckt": "1", "edge_type": "transformer"},
     { "id": 77, "name": "Mars - Phobos #1", "bus1_id": 4, "bus2_id": 29, "ckt": "1", "edge_type": "transformer"},
-    { "id": 78, "name": "Mars - Deimos #1", "bus1_id": 4, "bus2_id": 30, "ckt": "1", "edge_type": "transformer"}
+    { "id": 78, "name": "Mars - Deimos #1", "bus1_id": 4, "bus2_id": 30, "ckt": "1", "edge_type": "transformer"},
+    { "id": 79, "name": "Venus - Jupiter #3", "bus1_id": 5, "bus2_id": 6, "ckt": "3", "edge_type": "branch"}
+  ],
+  "related_branches": [
+    { "id1": 1, "id2": 2 },
+    { "id1": 6, "id2": 7 },
+    { "id1": 6, "id2": 79 },
+    { "id1": 7, "id2": 79 },
+    { "id1": 8, "id2": 9 },
+    { "id1": 19, "id2": 20 },
+    { "id1": 25, "id2": 26 }
+  ],
+  "mutual_details": [
+    {
+      "id1": 1, "id2": 2,
+      "mutual_pairs": [
+        {
+          "ZM": [0.019, 0.23],
+          "section1": {
+            "branch_name": "Sol - Luna #1",
+            "section_name": "Sol - Str 10",
+            "length_mi": 2.4,
+            "frac1": 0,
+            "frac2": 0.26
+          },
+          "section2": {
+            "branch_name": "Sol - Luna #2",
+            "section_name": "Sol - Str 10",
+            "length_mi": 2.4,
+            "frac1": 0,
+            "frac2": 0.26
+          }
+        },
+        {
+          "ZM": [0.06, 0.43],
+          "section1": {
+            "branch_name": "Sol - Luna #1",
+            "section_name": "Str 10 - Str 20",
+            "length_mi": 1.4,
+            "frac1": 0.26,
+            "frac2": 0.41
+          },
+          "section2": {
+            "branch_name": "Sol - Luna #2",
+            "section_name": "Str 10 - Str 20",
+            "length_mi": 1.4,
+            "frac1": 0.26,
+            "frac2": 0.41
+          }
+        },
+        {
+          "ZM": [0.015, 0.18],
+          "section1": {
+            "branch_name": "Sol - Luna #1",
+            "section_name": "Str 20 - Str 20",
+            "length_mi": 0.4,
+            "frac1": 0.41,
+            "frac2": 0.46
+          },
+          "section2": {
+            "branch_name": "Sol - Luna #2",
+            "section_name": "Str 20 - Str 30",
+            "length_mi": 0.4,
+            "frac1": 0.41,
+            "frac2": 0.46
+          }
+        },
+        {
+          "ZM": [0.025, 0.31],
+          "section1": {
+            "branch_name": "Sol - Luna #1",
+            "section_name": "Str 30 - Str Luna",
+            "length_mi": 5,
+            "frac1": 0.46,
+            "frac2": 1.0
+          },
+          "section2": {
+            "branch_name": "Sol - Luna #2",
+            "section_name": "Str 30 - Str Luna",
+            "length_mi": 5,
+            "frac1": 0.46,
+            "frac2": 1.0
+          }
+        }
+      ]
+    },
+    {
+      "id1": 6, "id2": 7,
+      "mutual_pairs": [
+        {
+          "ZM": [0.02, 0.13],
+          "section1": {
+            "branch_name": "Venus - Jupiter #1",
+            "section_name": "Venus - Str 15",
+            "length_mi": 5.6,
+            "frac1": 0,
+            "frac2": 0.31
+          },
+          "section2": {
+            "branch_name": "Venus - Jupiter #2",
+            "section_name": "Venus - Str 12",
+            "length_mi": 4.2,
+            "frac1": 0,
+            "frac2": 0.30
+          }
+        },
+        {
+          "ZM": [0.03, 0.19],
+          "section1": {
+            "branch_name": "Venus - Jupiter #1",
+            "section_name": "Str 15 - Str 25",
+            "length_mi": 3.4,
+            "frac1": 0.31,
+            "frac2": 0.50
+          },
+          "section2": {
+            "branch_name": "Venus - Jupiter #2",
+            "section_name": "Str 12 - Str 22",
+            "length_mi": 3.7,
+            "frac1": 0.30,
+            "frac2": 0.57
+          }
+        }
+      ]
+    },
+    {
+      "id1": 6, "id2": 79,
+      "mutual_pairs": [
+        {
+          "ZM": [0.021, 0.14],
+          "section1": {
+            "branch_name": "Venus - Jupiter #1",
+            "section_name": "Venus - Str 15",
+            "length_mi": 5.6,
+            "frac1": 0,
+            "frac2": 0.31
+          },
+          "section2": {
+            "branch_name": "Venus - Jupiter #3",
+            "section_name": "Venus - Str 12",
+            "length_mi": 4.2,
+            "frac1": 0,
+            "frac2": 0.30
+          }
+        },
+        {
+          "ZM": [0.028, 0.17],
+          "section1": {
+            "branch_name": "Venus - Jupiter #1",
+            "section_name": "Str 15 - Str 25",
+            "length_mi": 3.4,
+            "frac1": 0.31,
+            "frac2": 0.50
+          },
+          "section2": {
+            "branch_name": "Venus - Jupiter #3",
+            "section_name": "Str 12 - Str 22",
+            "length_mi": 3.7,
+            "frac1": 0.30,
+            "frac2": 0.57
+          }
+        }
+      ]
+    },
+    {
+      "id1": 7, "id2": 79,
+      "mutual_pairs": [
+        {
+          "ZM": [0.019, 0.12],
+          "section1": {
+            "branch_name": "Venus - Jupiter #2",
+            "section_name": "Venus - Str 15",
+            "length_mi": 5.6,
+            "frac1": 0,
+            "frac2": 0.31
+          },
+          "section2": {
+            "branch_name": "Venus - Jupiter #3",
+            "section_name": "Venus - Str 12",
+            "length_mi": 4.2,
+            "frac1": 0,
+            "frac2": 0.30
+          }
+        },
+        {
+          "ZM": [0.031, 0.21],
+          "section1": {
+            "branch_name": "Venus - Jupiter #2",
+            "section_name": "Str 15 - Str 25",
+            "length_mi": 3.4,
+            "frac1": 0.31,
+            "frac2": 0.50
+          },
+          "section2": {
+            "branch_name": "Venus - Jupiter #3",
+            "section_name": "Str 12 - Str 22",
+            "length_mi": 3.7,
+            "frac1": 0.30,
+            "frac2": 0.57
+          }
+        }
+      ]
+    },    
+    {
+      "id1": 8, "id2": 9,
+      "mutual_pairs": [
+        {
+          "ZM": [0.038, 0.52],
+          "section1": {
+            "branch_name": "Jupiter - Saturn #1",
+            "section_name": "Jupiter - Str 40",
+            "length_mi": 8.3,
+            "frac1": 0,
+            "frac2": 0.41
+          },
+          "section2": {
+            "branch_name": "Jupiter - Saturn #2",
+            "section_name": "Jupiter - Str 45",
+            "length_mi": 6.8,
+            "frac1": 0,
+            "frac2": 0.34
+          }
+        },
+        {
+          "ZM": [0.027, 0.34],
+          "section1": {
+            "branch_name": "Jupiter - Saturn #1",
+            "section_name": "Str 40 - Str 50",
+            "length_mi": 4.6,
+            "frac1": 0.41,
+            "frac2": 0.64
+          },
+          "section2": {
+            "branch_name": "Jupiter - Saturn #2",
+            "section_name": "Str 45 - Str 55",
+            "length_mi": 5.2,
+            "frac1": 0.34,
+            "frac2": 0.60
+          }
+        },
+        {
+          "ZM": [0.041, 0.58],
+          "section1": {
+            "branch_name": "Jupiter - Saturn #1",
+            "section_name": "Str 50 - Saturn",
+            "length_mi": 7.2,
+            "frac1": 0.64,
+            "frac2": 1.0
+          },
+          "section2": {
+            "branch_name": "Jupiter - Saturn #2",
+            "section_name": "Str 55 - Saturn",
+            "length_mi": 8.1,
+            "frac1": 0.60,
+            "frac2": 1.0
+          }
+        }
+      ]
+    },
+    {
+      "id1": 19, "id2": 20,
+      "mutual_pairs": [
+        {
+          "ZM": [0.029, 0.36],
+          "section1": {
+            "branch_name": "Io - Europa #1",
+            "section_name": "Io - Str 120",
+            "length_mi": 5.3,
+            "frac1": 0,
+            "frac2": 0.44
+          },
+          "section2": {
+            "branch_name": "Io - Europa #2",
+            "section_name": "Io - Str 125",
+            "length_mi": 4.7,
+            "frac1": 0,
+            "frac2": 0.34
+          }
+        },
+        {
+          "ZM": [0.035, 0.44],
+          "section1": {
+            "branch_name": "Io - Europa #1",
+            "section_name": "Str 120 - Europa",
+            "length_mi": 6.8,
+            "frac1": 0.44,
+            "frac2": 1.0
+          },
+          "section2": {
+            "branch_name": "Io - Europa #2",
+            "section_name": "Str 130 - Europa",
+            "length_mi": 5.9,
+            "frac1": 0.58,
+            "frac2": 1.0
+          }
+        }
+      ]
+    },
+    {
+      "id1": 25, "id2": 26,
+      "mutual_pairs": [
+        {
+          "ZM": [0.032, 0.39],
+          "section1": {
+            "branch_name": "Dione - Tethys #1",
+            "section_name": "Dione - Str 160",
+            "length_mi": 5.8,
+            "frac1": 0,
+            "frac2": 0.34
+          },
+          "section2": {
+            "branch_name": "Dione - Tethys #2",
+            "section_name": "Dione - Str 162",
+            "length_mi": 5.1,
+            "frac1": 0,
+            "frac2": 0.44
+          }
+        },
+        {
+          "ZM": [0.026, 0.33],
+          "section1": {
+            "branch_name": "Dione - Tethys #1",
+            "section_name": "Str 160 - Str 165",
+            "length_mi": 4.3,
+            "frac1": 0.34,
+            "frac2": 0.59
+          },
+          "section2": {
+            "branch_name": "Dione - Tethys #2",
+            "section_name": "Str 162 - Tethys",
+            "length_mi": 6.4,
+            "frac1": 0.44,
+            "frac2": 1.0
+          }
+        },
+        {
+          "ZM": [0.037, 0.48],
+          "section1": {
+            "branch_name": "Dione - Tethys #1",
+            "section_name": "Str 165 - Tethys",
+            "length_mi": 6.9,
+            "frac1": 0.59,
+            "frac2": 1.0
+          },
+          "section2": {
+            "branch_name": "Dione - Tethys #2",
+            "section_name": "Str 162 - Tethys",
+            "length_mi": 6.4,
+            "frac1": 0.44,
+            "frac2": 1.0
+          }
+        }
+      ]
+    }
   ]
 }

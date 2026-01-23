@@ -139,6 +139,50 @@
               listening: false
             }"
           />
+
+          <!-- Draw dashed lines between related branches -->
+          <v-line
+            v-for="(relation, index) in relatedBranchConnections"
+            :key="'relation-' + index"
+            :config="{
+              points: relation.points,
+              stroke: isRelationSelected(relation) ? selectionStyle.stroke : terminalStyle.normalColor,
+              strokeWidth: isRelationSelected(relation) ? 3 : 2,
+              dash: [2, 4],
+              lineJoin: 'round',
+              lineCap: 'round',
+              hitStrokeWidth: 5
+            }"
+            @click="handleRelatedBranchClick(relation, $event)"
+          />
+
+          <!-- Draw connection dots at the endpoints of related branch lines -->
+          <v-circle
+            v-for="(relation, index) in relatedBranchConnections"
+            :key="'relation-dot1-' + index"
+            :config="{
+              x: relation.points[0],
+              y: relation.points[1],
+              radius: isRelationSelected(relation) ? 5 : 4,
+              fill: isRelationSelected(relation) ? selectionStyle.fill : terminalStyle.normalColor,
+              stroke: '#FFFFFF',
+              strokeWidth: 1,
+              listening: false
+            }"
+          />
+          <v-circle
+            v-for="(relation, index) in relatedBranchConnections"
+            :key="'relation-dot2-' + index"
+            :config="{
+              x: relation.points[2],
+              y: relation.points[3],
+              radius: isRelationSelected(relation) ? 5 : 4,
+              fill: isRelationSelected(relation) ? selectionStyle.fill : terminalStyle.normalColor,
+              stroke: '#FFFFFF',
+              strokeWidth: 1,
+              listening: false
+            }"
+          />
         </v-layer>
       </v-stage>
     </v-sheet>
@@ -401,6 +445,15 @@
             class="mb-4"></v-text-field>
 
           <v-text-field
+            v-model.number="layoutOptions.edgeEdgeBetweenLayers"
+            label="Edge-Edge Between Layers"
+            type="number"
+            density="compact"
+            hint="elk.layered.spacing.edgeEdgeBetweenLayers"
+            persistent-hint
+            class="mb-4"></v-text-field>
+
+          <v-text-field
             v-model.number="layoutOptions.busHeight"
             label="Bus Height"
             type="number"
@@ -428,6 +481,7 @@
 import ELK from 'elkjs/lib/elk.bundled.js'
 import colors from 'vuetify/util/colors'
 import { useTheme } from 'vuetify'
+import { fetchRelatedBranches } from '@/services/branchApi'
 
 export default {
   name: 'SchematicEditor2',
@@ -511,12 +565,14 @@ export default {
         nodeNodeSpacing: 30,
         nodeNodeBetweenLayers: 80,
         edgeEdgeSpacing: 30,
+        edgeEdgeBetweenLayers: 20,
         busHeight: 100
       },
       layoutOptionsDefault: {
         nodeNodeSpacing: 30,
         nodeNodeBetweenLayers: 80,
         edgeEdgeSpacing: 30,
+        edgeEdgeBetweenLayers: 20,
         busHeight: 100
       },
       voltageColors: {
@@ -547,7 +603,7 @@ export default {
         over700: colors.orange.base
       },
 
-      // first dimension is the columns, second dimension is the rows 
+      // first dimension is the columns, second dimension is the rows
       // this feels backwards
       // maybe don't put purple in the swatches if I'm using that for the selected color
       swatches: [
@@ -557,6 +613,18 @@ export default {
           [colors.green.base, colors.lightGreen.base, colors.lime.base, colors.grey.base],
           [colors.yellow.base, colors.amber.base, colors.orange.base],
       ],
+
+      // Related branch connections for drawing dashed red lines between parallel branches
+      relatedBranchConnections: [],
+
+      // Track which relations are selected (independent of branch selection)
+      selectedRelations: [],
+
+      // Flash effect for highlighting a bus after grow operation
+      flashingBusId: null,
+
+      // Bus to select and center on after layout completes
+      pendingCenterBusId: null,
     }
   },
   computed: {
@@ -713,6 +781,7 @@ export default {
       }
 
       await this.computeLayout()
+      await this.updateRelatedBranchConnections()
       this.loading = false
       window.addEventListener('click', this.handleClickOutside)
     } catch (err) {
@@ -737,8 +806,10 @@ export default {
           // only increases spacing for edges running left-right
           // up-down edges are not affected
           'elk.spacing.edgeEdge': String(this.layoutOptions.edgeEdgeSpacing),
+          'elk.layered.spacing.edgeEdgeBetweenLayers': String(this.layoutOptions.edgeEdgeBetweenLayers),
           'elk.spacing.edgeLabel': '10',
           'elk.edgeRouting': 'ORTHOGONAL',
+          'elk.interactiveLayout': true,
           // 'elk.layered.spacing.edgeNodeBetweenLayers': 10,
           // 'elk.spacing.edgeNode': 10,
           'elk.layered.nodePlacement.bk.edgeStraightening': 'IMPROVE_STRAIGHTNESS',
@@ -846,6 +917,18 @@ export default {
           hidden: wasHidden
         }
       })
+
+      // Update related branch connections after layout changes
+      this.updateRelatedBranchConnections()
+
+      // If there's a pending bus to center on, do it now that layout is complete
+      if (this.pendingCenterBusId) {
+        const busIdToCenter = this.pendingCenterBusId
+        this.pendingCenterBusId = null
+        this.$nextTick(() => {
+          this.selectAndCenterOnBus(busIdToCenter)
+        })
+      }
     },
     getColorByVoltage(kv) {
       if (!kv) return colors.blue.base
@@ -871,6 +954,7 @@ export default {
     },
     getBusConfig(bus) {
       const busColor = this.getBusColor(bus)
+      const isFlashing = this.flashingBusId === bus.id
       const baseConfig = {
         x: bus.x,
         y: bus.y,
@@ -879,6 +963,18 @@ export default {
         fill: busColor,
         stroke: busColor,
         strokeWidth: 2
+      }
+
+      if (isFlashing) {
+        // Add a glow effect when flashing
+        return {
+          ...baseConfig,
+          ...this.selectionStyle,
+          shadowColor: this.selectionStyle.stroke,
+          shadowBlur: 20,
+          shadowOpacity: 0.8,
+          strokeWidth: 4
+        }
       }
 
       if (bus.selected) {
@@ -891,7 +987,7 @@ export default {
         points: edge.points,
         lineJoin: 'miter',
         lineCap: 'butt',
-        hitStrokeWidth: 20
+        hitStrokeWidth: 10
       }
 
       if (edge.selected) {
@@ -929,7 +1025,7 @@ export default {
           strokeWidth: 2,
           lineJoin: 'miter',
           lineCap: 'butt',
-          hitStrokeWidth: 20
+          hitStrokeWidth: 10
         }
 
         if (edge.selected) {
@@ -952,7 +1048,7 @@ export default {
           strokeWidth: 2,
           lineJoin: 'miter',
           lineCap: 'butt',
-          hitStrokeWidth: 20
+          hitStrokeWidth: 10
         }
         return [{
           config: edge.selected ? { ...baseConfig, ...this.selectionStyle } : baseConfig
@@ -1007,7 +1103,7 @@ export default {
           strokeWidth: 2,
           lineJoin: 'miter',
           lineCap: 'butt',
-          hitStrokeWidth: 20
+          hitStrokeWidth: 10
         }
         return [{
           config: edge.selected ? { ...baseConfig, ...this.selectionStyle } : baseConfig
@@ -1021,7 +1117,7 @@ export default {
         strokeWidth: edge.selected ? this.selectionStyle.strokeWidth : 2,
         lineJoin: 'miter',
         lineCap: 'butt',
-        hitStrokeWidth: 20
+        hitStrokeWidth: 10
       }
 
       const baseConfig2 = {
@@ -1030,7 +1126,7 @@ export default {
         strokeWidth: edge.selected ? this.selectionStyle.strokeWidth : 2,
         lineJoin: 'miter',
         lineCap: 'butt',
-        hitStrokeWidth: 20
+        hitStrokeWidth: 10
       }
 
       return [
@@ -1128,6 +1224,7 @@ export default {
         })
         this.layoutEdges.forEach(edge => edge.selected = false)
         this.activeTerminals = []
+        this.selectedRelations = []
       }
 
       bus.selected = !bus.selected
@@ -1148,6 +1245,7 @@ export default {
           if (edg !== edge) edg.selected = false
         })
         this.activeTerminals = []
+        this.selectedRelations = []
       }
 
       edge.selected = !edge.selected
@@ -1155,6 +1253,63 @@ export default {
       console.log('Edge clicked:', edge)
       this.$emit('edge-click', edge)
       this.emitSelectionChanged()
+    },
+    handleRelatedBranchClick(relation, e) {
+      // Only handle left-clicks
+      if (e?.evt?.button !== 0) return
+
+      const shiftKey = e?.evt?.shiftKey || false
+
+      // Create a unique key for this relation (sorted to ensure consistency)
+      const relationKey = [relation.edge1Id, relation.edge2Id].sort((a, b) => a - b).join('-')
+
+      if (!shiftKey) {
+        // Clear all selections first
+        this.layoutBuses.forEach(bus => bus.selected = false)
+        this.layoutEdges.forEach(edge => edge.selected = false)
+        this.activeTerminals = []
+        this.selectedRelations = []
+      }
+
+      // Toggle this relation in the selectedRelations list
+      const index = this.selectedRelations.indexOf(relationKey)
+      if (index === -1) {
+        // Add relation to selection
+        this.selectedRelations.push(relationKey)
+
+        // Also select both branches
+        const edge1 = this.layoutEdges.find(edge => parseInt(edge.id) === relation.edge1Id)
+        const edge2 = this.layoutEdges.find(edge => parseInt(edge.id) === relation.edge2Id)
+        if (edge1) edge1.selected = true
+        if (edge2) edge2.selected = true
+      } else {
+        // Remove relation from selection
+        this.selectedRelations.splice(index, 1)
+
+        // Deselect branches if they're not part of any other selected relation
+        this.updateBranchSelectionFromRelations()
+      }
+
+      console.log('Related branch connection clicked:', relation.edge1Id, '<->', relation.edge2Id)
+      this.emitSelectionChanged()
+    },
+    isRelationSelected(relation) {
+      // Check if this specific relation is in the selectedRelations list
+      const relationKey = [relation.edge1Id, relation.edge2Id].sort((a, b) => a - b).join('-')
+      return this.selectedRelations.includes(relationKey)
+    },
+    updateBranchSelectionFromRelations() {
+      // Clear all edge selections first
+      this.layoutEdges.forEach(edge => edge.selected = false)
+
+      // Select edges that are part of any selected relation
+      this.selectedRelations.forEach(relationKey => {
+        const [edge1Id, edge2Id] = relationKey.split('-').map(Number)
+        const edge1 = this.layoutEdges.find(edge => parseInt(edge.id) === edge1Id)
+        const edge2 = this.layoutEdges.find(edge => parseInt(edge.id) === edge2Id)
+        if (edge1) edge1.selected = true
+        if (edge2) edge2.selected = true
+      })
     },
     handleTerminalCapClick(edge, cap, e) {
       // Only handle left-clicks, ignore right-clicks (handled by contextmenu)
@@ -1174,6 +1329,7 @@ export default {
       if (!shiftKey) {
         this.layoutBuses.forEach(bus => bus.selected = false)
         this.layoutEdges.forEach(edg => edg.selected = false)
+        this.selectedRelations = []
 
         // Clear all terminals except the one being clicked if it was selected
         if (wasSelected) {
@@ -1207,6 +1363,7 @@ export default {
         this.layoutBuses.forEach(bus => bus.selected = false)
         this.layoutEdges.forEach(edge => edge.selected = false)
         this.activeTerminals = []
+        this.selectedRelations = []
 
         console.log('Canvas background clicked - deselecting all')
         this.$emit('stage-click')
@@ -1666,6 +1823,50 @@ export default {
       })
 
       console.log(`Unhid ${busIds.length} buses and ${branchIds.length} branches from grow operation`)
+
+      // Update related branch connections after visibility changes
+      this.updateRelatedBranchConnections()
+    },
+    selectAndCenterOnBus(busId) {
+      // Find the bus by ID
+      const busIdStr = String(busId)
+      const bus = this.layoutBuses.find(b => b.id === busIdStr)
+
+      if (!bus) {
+        console.warn('Bus not found for centering:', busId)
+        return
+      }
+
+      // Clear other selections and select this bus
+      this.layoutBuses.forEach(b => b.selected = false)
+      this.layoutEdges.forEach(e => e.selected = false)
+      this.activeTerminals = []
+      this.selectedRelations = []
+      bus.selected = true
+
+      // Calculate the center of the bus
+      const busCenterX = bus.x + bus.width / 2
+      const busCenterY = bus.y + bus.height / 2
+
+      // Calculate the new stage position to center the bus in the viewport
+      // Stage position is the offset of the stage content
+      const viewportCenterX = this.stageConfig.width / 2
+      const viewportCenterY = this.stageConfig.height / 2
+
+      // Set stage position so bus center is at viewport center
+      this.stageConfig.x = viewportCenterX - busCenterX
+      this.stageConfig.y = viewportCenterY - busCenterY
+
+      // Show purple glow for 2 seconds to highlight the bus
+      this.flashingBusId = busIdStr
+      setTimeout(() => {
+        this.flashingBusId = null
+      }, 2000)
+
+      // Emit selection changed
+      this.emitSelectionChanged()
+
+      console.log(`Centered on bus ${bus.name} at (${busCenterX}, ${busCenterY})`)
     },
     isObjectInSelection(obj, selRect) {
       // Normalize selection rectangle to handle negative widths/heights
@@ -1699,6 +1900,94 @@ export default {
       }
 
       return false
+    },
+    calculateEdgeMidpoint(points) {
+      // Points array is [x1, y1, x2, y2, x3, y3, ...]
+      // Calculate the total length of the path and find the midpoint
+      let totalLength = 0
+      const segments = []
+
+      for (let i = 0; i < points.length - 2; i += 2) {
+        const x1 = points[i]
+        const y1 = points[i + 1]
+        const x2 = points[i + 2]
+        const y2 = points[i + 3]
+
+        const segmentLength = Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
+        segments.push({
+          x1, y1, x2, y2,
+          length: segmentLength
+        })
+        totalLength += segmentLength
+      }
+
+      // Find the segment that contains the midpoint
+      const halfLength = totalLength / 2
+      let accumulatedLength = 0
+
+      for (const segment of segments) {
+        if (accumulatedLength + segment.length >= halfLength) {
+          // The midpoint is in this segment
+          const remainingLength = halfLength - accumulatedLength
+          const ratio = remainingLength / segment.length
+
+          return {
+            x: segment.x1 + (segment.x2 - segment.x1) * ratio,
+            y: segment.y1 + (segment.y2 - segment.y1) * ratio
+          }
+        }
+        accumulatedLength += segment.length
+      }
+
+      // Fallback to the last point if something goes wrong
+      return {
+        x: points[points.length - 2],
+        y: points[points.length - 1]
+      }
+    },
+    async updateRelatedBranchConnections() {
+      // Get all visible edge IDs
+      const visibleEdgeIds = this.visibleEdges.map(edge => parseInt(edge.id))
+
+      if (visibleEdgeIds.length === 0) {
+        this.relatedBranchConnections = []
+        return
+      }
+
+      // Fetch related branches for all visible edges
+      const relatedIds = await fetchRelatedBranches(visibleEdgeIds)
+
+      // Build connections for pairs where both branches are visible
+      const connections = []
+      const visibleEdgeIdSet = new Set(visibleEdgeIds)
+
+      // For each visible edge, check if any of its related branches are also visible
+      for (const edgeId of visibleEdgeIds) {
+        const relatedToThis = await fetchRelatedBranches([edgeId])
+
+        for (const relatedId of relatedToThis) {
+          // Only create connection if both branches are visible
+          // And only create once (when edgeId < relatedId to avoid duplicates)
+          if (visibleEdgeIdSet.has(relatedId) && edgeId < relatedId) {
+            const edge1 = this.visibleEdges.find(e => parseInt(e.id) === edgeId)
+            const edge2 = this.visibleEdges.find(e => parseInt(e.id) === relatedId)
+
+            if (edge1 && edge2 && edge1.points.length >= 4 && edge2.points.length >= 4) {
+              const mid1 = this.calculateEdgeMidpoint(edge1.points)
+              const mid2 = this.calculateEdgeMidpoint(edge2.points)
+
+              connections.push({
+                points: [mid1.x, mid1.y, mid2.x, mid2.y],
+                edge1Id: edgeId,
+                edge2Id: relatedId
+              })
+            }
+          }
+        }
+      }
+
+      this.relatedBranchConnections = connections
+      console.log(`Updated related branch connections: ${connections.length} connections found`)
     }
   }
 }

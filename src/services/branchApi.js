@@ -5,6 +5,8 @@ import networkData from './network.json'
  * Mock data for branches loaded from network.json
  */
 const mockBranches = networkData.branches || []
+const relatedBranches = networkData.related_branches || []
+const mutualDetails = networkData.mutual_details || []
 
 /**
  * Simulates network delay for API calls
@@ -69,4 +71,59 @@ export async function searchBranches(query) {
       branch.bus2_id.toString().includes(lowerQuery)
     )
   })
+}
+
+/**
+ * Fetch related branches for a list of branch IDs
+ * Returns all branch IDs that are related to any of the input branch IDs
+ * @param {Array<number>} branchIds - Array of branch IDs to find relations for
+ * @returns {Promise<Array<number>>} Array of related branch IDs (excluding the input IDs)
+ */
+export async function fetchRelatedBranches(branchIds) {
+  await delay(200)
+
+  if (!branchIds || branchIds.length === 0) {
+    return []
+  }
+
+  const inputSet = new Set(branchIds.map(id => Number(id)))
+  const relatedIds = new Set()
+
+  relatedBranches.forEach(relation => {
+    const id1 = Number(relation.id1)
+    const id2 = Number(relation.id2)
+
+    if (inputSet.has(id1)) {
+      relatedIds.add(id2)
+    }
+    if (inputSet.has(id2)) {
+      relatedIds.add(id1)
+    }
+  })
+
+  // Remove input IDs from results (only return the related ones, not the original inputs)
+  inputSet.forEach(id => relatedIds.delete(id))
+
+  return Array.from(relatedIds)
+}
+
+/**
+ * Fetch mutual details for a pair of related branches
+ * @param {number} branchId1 - First branch ID
+ * @param {number} branchId2 - Second branch ID
+ * @returns {Promise<Object|null>} Mutual details object or null if not found
+ */
+export async function fetchMutualDetails(branchId1, branchId2) {
+  await delay(200)
+
+  const id1 = Number(branchId1)
+  const id2 = Number(branchId2)
+
+  // Find mutual details for this pair (order doesn't matter)
+  const details = mutualDetails.find(md =>
+    (md.id1 === id1 && md.id2 === id2) ||
+    (md.id1 === id2 && md.id2 === id1)
+  )
+
+  return details || null
 }

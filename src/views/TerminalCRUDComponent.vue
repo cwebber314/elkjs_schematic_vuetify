@@ -103,6 +103,7 @@
             <v-tab value="buses">Buses</v-tab>
             <v-tab value="sections">Sections</v-tab>
             <v-tab value="terminal-equipment">Terminal Equipment</v-tab>
+            <v-tab value="mutual-details">Mutual Details</v-tab>
           </v-tabs>
 
           <v-card-text>
@@ -273,6 +274,102 @@
                   </template>
                 </v-data-table>
               </v-window-item>
+
+              <!-- Mutual Details Tab -->
+              <v-window-item value="mutual-details">
+                <v-toolbar flat>
+                  <v-toolbar-title>Mutual Coupling Details ({{ selectedMutualDetails.length }} pairs)</v-toolbar-title>
+                </v-toolbar>
+
+                <v-alert v-if="selectedMutualDetails.length === 0" type="info" class="ma-2">
+                  No related branches found for the selected branches. Select branches that have parallel circuits to see their mutual coupling details.
+                </v-alert>
+
+                <div v-else class="mutual-details-container pa-2">
+                  <v-card
+                    v-for="(detail, index) in selectedMutualDetails"
+                    :key="'mutual-' + index"
+                    class="mb-4"
+                    variant="outlined">
+                    <v-card-title class="bg-primary text-white py-2">
+                      <v-icon class="mr-2">mdi-link-variant</v-icon>
+                      Branch {{ detail.id1 }} ↔ Branch {{ detail.id2 }}
+                    </v-card-title>
+
+                    <v-card-text class="pa-0">
+                      <div
+                        v-for="(pair, pairIndex) in detail.mutual_pairs"
+                        :key="'pair-' + pairIndex"
+                        class="mutual-pair-row"
+                        :class="{ 'bg-grey-lighten-4': pairIndex % 2 === 0 }">
+                        <v-row no-gutters class="align-center">
+                          <!-- Section 1 -->
+                          <v-col cols="5" class="pa-3">
+                            <div class="section-card">
+                              <div class="text-caption text-grey">{{ pair.section1.branch_name }}</div>
+                              <div class="font-weight-medium">{{ pair.section1.section_name }}</div>
+                              <div class="d-flex justify-space-between mt-1">
+                                <v-chip size="x-small" color="blue" variant="flat">
+                                  {{ pair.section1.length_mi }} mi
+                                </v-chip>
+                                <span class="text-caption">
+                                  {{ (pair.section1.frac1 * 100).toFixed(0) }}% - {{ (pair.section1.frac2 * 100).toFixed(0) }}%
+                                </span>
+                              </div>
+                              <div class="range-bar mt-1">
+                                <div
+                                  class="range-bar-fill bg-blue"
+                                  :style="{
+                                    left: (pair.section1.frac1 * 100) + '%',
+                                    width: ((pair.section1.frac2 - pair.section1.frac1) * 100) + '%'
+                                  }">
+                                </div>
+                              </div>
+                            </div>
+                          </v-col>
+
+                          <!-- Coupling indicator -->
+                          <v-col cols="2" class="text-center pa-2">
+                            <v-icon color="orange" size="large">mdi-link</v-icon>
+                            <div class="text-caption text-grey">coupled</div>
+                            <div v-if="pair.ZM" class="mt-2">
+                              <div class="text-caption font-weight-bold">ZM</div>
+                              <div class="text-body-2">
+                                {{ pair.ZM[0].toFixed(3) }} + j{{ pair.ZM[1].toFixed(3) }}
+                              </div>
+                            </div>
+                          </v-col>
+
+                          <!-- Section 2 -->
+                          <v-col cols="5" class="pa-3">
+                            <div class="section-card">
+                              <div class="text-caption text-grey">{{ pair.section2.branch_name }}</div>
+                              <div class="font-weight-medium">{{ pair.section2.section_name }}</div>
+                              <div class="d-flex justify-space-between mt-1">
+                                <v-chip size="x-small" color="blue" variant="flat">
+                                  {{ pair.section2.length_mi }} mi
+                                </v-chip>
+                                <span class="text-caption">
+                                  {{ (pair.section2.frac1 * 100).toFixed(0) }}% - {{ (pair.section2.frac2 * 100).toFixed(0) }}%
+                                </span>
+                              </div>
+                              <div class="range-bar mt-1">
+                                <div
+                                  class="range-bar-fill bg-blue"
+                                  :style="{
+                                    left: (pair.section2.frac1 * 100) + '%',
+                                    width: ((pair.section2.frac2 - pair.section2.frac1) * 100) + '%'
+                                  }">
+                                </div>
+                              </div>
+                            </div>
+                          </v-col>
+                        </v-row>
+                      </div>
+                    </v-card-text>
+                  </v-card>
+                </div>
+              </v-window-item>
             </v-window>
           </v-card-text>
         </v-card>
@@ -336,6 +433,7 @@
 <script>
 import { fetchNetworkByBusId } from '../services/networkApi.js'
 import { fetchAllSections } from '../services/sectionsApi.js'
+import { fetchRelatedBranches, fetchMutualDetails } from '../services/branchApi.js'
 import terminalEquipmentData from '../terminal_equipment.json'
 import SchematicEditor2 from '../components/SchematicEditor2.vue'
 import EditBranch from '../components/EditBranch.vue'
@@ -422,7 +520,8 @@ export default {
         { title: 'Bus', key: 'bus_name', sortable: true },
         { title: 'Branch ID', key: 'branch_id', sortable: true },
         { title: 'Bus ID', key: 'bus_id', sortable: true }
-      ]
+      ],
+      selectedMutualDetails: []
     }
   },
   computed: {
@@ -549,6 +648,13 @@ export default {
       console.log('Region changed to:', newVal)
       // Save selected region to localStorage
       localStorage.setItem('selectedRegion', newVal)
+    },
+    selectedEdges: {
+      async handler(newVal) {
+        // Update mutual details when selected edges change
+        await this.updateMutualDetails()
+      },
+      deep: true
     }
   },
   async mounted() {
@@ -751,6 +857,11 @@ export default {
             // Merge the new network data with existing data
             this.mergeNetworkData(network)
 
+            // Set the bus to center on after layout completes
+            if (this.$refs.schematicEditor) {
+              this.$refs.schematicEditor.pendingCenterBusId = targetObject.id
+            }
+
             // Unhide all buses and branches from the grow result
             await this.$nextTick() // Wait for layout to recompute
             if (this.$refs.schematicEditor) {
@@ -927,6 +1038,49 @@ export default {
         points: []
       }
       this.showBranchDialog = true
+    },
+    async updateMutualDetails() {
+      // Get selected branch IDs
+      const selectedBranchIds = this.selectedEdges.map(edge => parseInt(edge.id))
+
+      if (selectedBranchIds.length === 0) {
+        this.selectedMutualDetails = []
+        return
+      }
+
+      // Fetch related branches for each selected branch
+      const mutualDetailsList = []
+      const addedPairs = new Set() // Track added pairs to avoid duplicates
+
+      for (const branchId of selectedBranchIds) {
+        const relatedIds = await fetchRelatedBranches([branchId])
+
+        for (const relatedId of relatedIds) {
+          // Create a unique key for this pair (sorted to avoid duplicates)
+          const pairKey = [branchId, relatedId].sort((a, b) => a - b).join('-')
+
+          // Only add if both branches are selected and we haven't added this pair yet
+          if (selectedBranchIds.includes(relatedId) && !addedPairs.has(pairKey)) {
+            addedPairs.add(pairKey)
+
+            // Fetch the full mutual details for this pair
+            const details = await fetchMutualDetails(branchId, relatedId)
+            if (details) {
+              mutualDetailsList.push(details)
+            } else {
+              // If no details found, still show the pair with empty mutual_pairs
+              mutualDetailsList.push({
+                id1: Math.min(branchId, relatedId),
+                id2: Math.max(branchId, relatedId),
+                mutual_pairs: []
+              })
+            }
+          }
+        }
+      }
+
+      this.selectedMutualDetails = mutualDetailsList
+      console.log('Updated mutual details:', mutualDetailsList.length, 'pairs')
     }
   }
 }
@@ -1014,5 +1168,40 @@ export default {
   height: 100%;
   display: flex;
   flex-direction: column;
+}
+
+.mutual-details-container {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.mutual-pair-row {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.mutual-pair-row:last-child {
+  border-bottom: none;
+}
+
+.section-card {
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 4px;
+  padding: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.range-bar {
+  position: relative;
+  height: 6px;
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.range-bar-fill {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  border-radius: 3px;
 }
 </style>
