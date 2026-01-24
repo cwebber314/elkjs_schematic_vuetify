@@ -52,3 +52,25 @@ export async function fetchNetworkByBusId(busid) {
     branches: connectedBranches
   }
 }
+
+/**
+ * Fetch network data for specific bus IDs and branch IDs.
+ * Returns buses matching the IDs and branches matching the branch IDs.
+ * @param {number[]} busIds - Array of bus IDs to load
+ * @param {number[]} branchIds - Array of branch IDs to load
+ * @returns {Promise<{buses: Array, branches: Array}>}
+ */
+export async function fetchNetworkByIds(busIds, branchIds) {
+  await delay(300)
+
+  const busIdSet = new Set(busIds)
+  const branchIdSet = new Set(branchIds)
+
+  // Get buses matching the IDs
+  const buses = mockBuses.filter(bus => busIdSet.has(bus.id))
+
+  // Get branches matching the branch IDs
+  const branches = mockBranches.filter(branch => branchIdSet.has(branch.id))
+
+  return { buses, branches }
+}

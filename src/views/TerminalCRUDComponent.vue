@@ -332,7 +332,8 @@
                           <v-col cols="2" class="text-center pa-2">
                             <v-icon color="orange" size="large">mdi-link</v-icon>
                             <div class="text-caption text-grey">coupled</div>
-                            <div v-if="pair.ZM" class="mt-2">
+                            <!-- TODO: Disabled ZM here - maybe I'll add it back later -->
+                            <div v-if="pair.ZM && false" class="mt-2">
                               <div class="text-caption font-weight-bold">ZM</div>
                               <div class="text-body-2">
                                 {{ pair.ZM[0].toFixed(3) }} + j{{ pair.ZM[1].toFixed(3) }}
@@ -366,6 +367,63 @@
                           </v-col>
                         </v-row>
                       </div>
+                    </v-card-text>
+
+                    <!-- Mutual Coupling Table -->
+                    <v-card-text v-if="detail.mutual_pairs.length > 0" class="pt-0">
+                      <v-divider class="mb-3"></v-divider>
+                      <v-table density="compact" class="mutual-table">
+                        <thead>
+                          <tr>
+                            <th class="text-left" rowspan="2">Branch</th>
+                            <th
+                              v-for="(pair, pairIndex) in detail.mutual_pairs"
+                              :key="'header1-' + pairIndex"
+                              colspan="2"
+                              class="text-center border-left">
+                              Mutual {{ pairIndex + 1 }}
+                            </th>
+                          </tr>
+                          <tr>
+                            <template v-for="(pair, pairIndex) in detail.mutual_pairs" :key="'header2-' + pairIndex">
+                              <th class="text-center border-left">frac1</th>
+                              <th class="text-center">frac2</th>
+                            </template>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <!-- Branch 1 Row -->
+                          <tr>
+                            <td class="font-weight-medium">{{ detail.id1 }}</td>
+                            <template v-for="(pair, pairIndex) in detail.mutual_pairs" :key="'b1-' + pairIndex">
+                              <td class="text-center border-left">{{ pair.section1.frac1.toFixed(3) }}</td>
+                              <td class="text-center">{{ pair.section1.frac2.toFixed(3) }}</td>
+                            </template>
+                          </tr>
+                          <!-- Branch 2 Row -->
+                          <tr>
+                            <td class="font-weight-medium">{{ detail.id2 }}</td>
+                            <template v-for="(pair, pairIndex) in detail.mutual_pairs" :key="'b2-' + pairIndex">
+                              <td class="text-center border-left">{{ pair.section2.frac1.toFixed(3) }}</td>
+                              <td class="text-center">{{ pair.section2.frac2.toFixed(3) }}</td>
+                            </template>
+                          </tr>
+                          <!-- ZM Row -->
+                          <tr class="bg-grey-lighten-4">
+                            <td class="font-weight-medium">ZM</td>
+                            <template v-for="(pair, pairIndex) in detail.mutual_pairs" :key="'zm-' + pairIndex">
+                              <td
+                                colspan="2"
+                                class="text-center border-left font-weight-medium">
+                                <span v-if="pair.ZM">
+                                  {{ pair.ZM[0].toFixed(3) }} + j{{ pair.ZM[1].toFixed(3) }}
+                                </span>
+                                <span v-else class="text-grey">N/A</span>
+                              </td>
+                            </template>
+                          </tr>
+                        </tbody>
+                      </v-table>
                     </v-card-text>
                   </v-card>
                 </div>
@@ -431,7 +489,7 @@
 
 
 <script>
-import { fetchNetworkByBusId } from '../services/networkApi.js'
+import { fetchNetworkByBusId, fetchNetworkByIds } from '../services/networkApi.js'
 import { fetchAllSections } from '../services/sectionsApi.js'
 import { fetchRelatedBranches, fetchMutualDetails } from '../services/branchApi.js'
 import terminalEquipmentData from '../terminal_equipment.json'
@@ -648,6 +706,15 @@ export default {
       console.log('Region changed to:', newVal)
       // Save selected region to localStorage
       localStorage.setItem('selectedRegion', newVal)
+      // Update URL params
+      this.updateUrlParams()
+    },
+    networkData: {
+      handler() {
+        // Update URL when network data changes
+        this.updateUrlParams()
+      },
+      deep: true
     },
     selectedEdges: {
       async handler(newVal) {
@@ -661,11 +728,21 @@ export default {
     window.addEventListener('resize', this.handleResize)
     window.addEventListener('keydown', this.handleKeyPress)
 
-    // Restore saved region from localStorage
-    const savedRegion = localStorage.getItem('selectedRegion')
-    if (savedRegion && this.regions.includes(savedRegion)) {
-      this.region = savedRegion
-      console.log('Restored region from localStorage:', savedRegion)
+    // Check URL query params first
+    const queryRegion = this.$route.query.region
+    const queryBuses = this.$route.query.buses
+
+    // Set region from URL param or localStorage
+    if (queryRegion && this.regions.includes(queryRegion)) {
+      this.region = queryRegion
+      console.log('Restored region from URL:', queryRegion)
+    } else {
+      // Fallback to localStorage
+      const savedRegion = localStorage.getItem('selectedRegion')
+      if (savedRegion && this.regions.includes(savedRegion)) {
+        this.region = savedRegion
+        console.log('Restored region from localStorage:', savedRegion)
+      }
     }
 
     // Restore saved schematic height from localStorage
@@ -675,6 +752,26 @@ export default {
       if (!isNaN(height) && height >= 200 && height <= window.innerHeight - 200) {
         this.editorHeight = height
         console.log('Restored schematic height from localStorage:', height)
+      }
+    }
+
+    // Load network from URL params if present
+    const queryBranches = this.$route.query.branches
+    if (queryBuses || queryBranches) {
+      const busIds = queryBuses ? queryBuses.split(',').map(id => parseInt(id, 10)).filter(id => !isNaN(id)) : []
+      const branchIds = queryBranches ? queryBranches.split(',').map(id => parseInt(id, 10)).filter(id => !isNaN(id)) : []
+      if (busIds.length > 0 || branchIds.length > 0) {
+        try {
+          this.loading = true
+          const network = await fetchNetworkByIds(busIds, branchIds)
+          this.networkData = network
+          console.log('Loaded network from URL params:', busIds.length, 'buses,', branchIds.length, 'branches requested;', network.buses.length, 'buses,', network.branches.length, 'branches found')
+        } catch (err) {
+          console.error('Error loading network from URL params:', err)
+          this.error = 'Failed to load network from URL'
+        } finally {
+          this.loading = false
+        }
       }
     }
 
@@ -692,6 +789,21 @@ export default {
     window.removeEventListener('keydown', this.handleKeyPress)
   },
   methods: {
+    // Update URL query params to reflect current state
+    updateUrlParams() {
+      const busIds = this.networkData.buses.map(b => b.id).join(',')
+      const branchIds = this.networkData.branches.map(b => b.id).join(',')
+      const query = {}
+
+      if (this.region) query.region = this.region
+      if (busIds) query.buses = busIds
+      if (branchIds) query.branches = branchIds
+
+      // Use replace to avoid polluting browser history
+      this.$router.replace({ query }).catch(() => {
+        // Ignore navigation duplicated errors
+      })
+    },
     // Helper method to sum section lengths
     sumSectionLengths(sections) {
       return sections.reduce((sum, section) => sum + section.length_mi, 0)
@@ -1203,5 +1315,32 @@ export default {
   top: 0;
   height: 100%;
   border-radius: 3px;
+}
+
+.mutual-table {
+  border: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+.mutual-table th,
+.mutual-table td {
+  padding: 8px !important;
+}
+
+.mutual-table .border-left {
+  border-left: 2px solid rgba(0, 0, 0, 0.2);
+}
+
+.mutual-table thead tr:first-child th {
+  background-color: rgba(var(--v-theme-primary), 0.1);
+  font-weight: bold;
+}
+
+.mutual-table thead tr:nth-child(2) th {
+  background-color: rgba(var(--v-theme-primary), 0.05);
+  font-size: 0.85rem;
+}
+
+.mutual-table tbody tr:last-child {
+  font-weight: 500;
 }
 </style>
